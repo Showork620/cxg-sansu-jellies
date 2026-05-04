@@ -24,7 +24,7 @@
 | 選択肢生成 | 答えが0または10のとき近傍候補が足りない場合の補完が未定 | 近傍優先後、0から10の未使用値で補完 |
 | 連続問題制御 | 「連続しすぎない」の具体ルールが未定 | 直近3問と完全一致を避ける。候補が少ない場合は最大20回リトライ |
 | 成功演出 | 次問題への遷移タイミングが未定 | 自動遷移なし。`つぎのもんだいへ` を押したときだけ進む |
-| 音 | MVP後回しだが、UIにはON/OFFがある | 初期実装では設定だけ保存し、音源未実装時は効果音処理を no-op にする |
+| 音 | サウンドは体験上重要だが、指示書ではON/OFFと後回し項目のみで、再生設計・素材管理・モバイル制約が未定 | サウンドをMVPの重要要素に昇格。掴む、置く、正解、不正解、メニュー操作のSEを定義し、無料SEのライセンス管理と音声アンロックを設計に含める |
 | アクセシビリティ | 低年齢向けの文字サイズ、タップ領域、motion配慮が未定 | 最小タップ44px以上、数字は大きく、`prefers-reduced-motion` 対応 |
 | 外部リソース | 外部リンクなしのためフォント/CDN利用が曖昧 | 初期実装はシステムフォントまたは同梱アセットのみ使用 |
 | キャラクター実装 | SVG/CSS/Canvas の方式が未定 | MVPはReact SVGコンポーネント。表情はpropsで切替 |
@@ -35,7 +35,7 @@
 - 通常プレイ画面には閉じる、戻る、設定ボタンを置かない。
 - 初回起動だけは、スクショに合わせてスプラッシュ後に保護者向け設定画面を出す。
 - モード・レベルは自動変更しない。親が明示的に変更するまで固定する。
-- MVPでは足し算を完成させる。引き算は設計と型だけ先に通す。
+- MVPでは足し算と基本サウンド体験を完成させる。引き算は設計と型だけ先に通す。
 - レベル1/2の操作は「右側ゼリーを下段の集約エリアへ移動する」方式に統一する。
 - レベル1は集約エリア付近に大きく合計値を表示する。レベル2は表示しない。
 - レベル3はゼリーを薄く補助表示するが、ドラッグ不可にする。
@@ -93,6 +93,15 @@ src/
     ParentMenu.tsx
     SuccessOverlay.tsx
     Confetti.tsx
+  audio/
+    soundManager.ts
+    soundManifest.ts
+    useSound.ts
+  feedback/
+    feedbackTypes.ts
+    visualFeedback.ts
+    haptics.ts
+    feedbackManager.ts
   game/
     types.ts
     constants.ts
@@ -105,6 +114,9 @@ src/
     useLongPress.ts
     useDragJellies.ts
     useReducedMotion.ts
+  assets/
+    sounds/
+      README.md
 ```
 
 ## 4. 画面設計
@@ -114,7 +126,7 @@ src/
 | 画面 | 目的 | 表示条件 |
 | --- | --- | --- |
 | SplashScreen | 起動導入。タイトルとキャラクターを見せる | 初回起動時、またはアプリ起動直後の短時間 |
-| SetupScreen | 保護者がモード・レベル・音を選ぶ | 初回起動で設定未完了の場合 |
+| SetupScreen | 保護者がモード・レベル・音・ブルブルを選ぶ | 初回起動で設定未完了の場合 |
 | GameScreen | 通常プレイ | 設定完了後 |
 | ParentMenu | 保護者設定 | 左上つまみを長押しした場合のみ |
 | SuccessOverlay | 正解演出 | `gameState === "correct"` |
@@ -181,11 +193,46 @@ export type CharacterState =
   | "happy"
   | "excited";
 
+export type SoundId =
+  | "uiTap"
+  | "menuOpen"
+  | "jellyGrab"
+  | "jellyDrop"
+  | "jellySnap"
+  | "answerWrong"
+  | "answerCorrect"
+  | "successFanfare"
+  | "nextProblem";
+
+export type FeedbackEventId =
+  | "jellyPress"
+  | "jellyDragStart"
+  | "jellyDragMove"
+  | "jellyDropMiss"
+  | "jellyDropSuccess"
+  | "jellyMergeComplete"
+  | "answerPress"
+  | "answerWrong"
+  | "answerCorrect"
+  | "menuLongPressProgress"
+  | "menuOpen"
+  | "nextProblem";
+
+export type HapticPatternId =
+  | "none"
+  | "tap"
+  | "softTick"
+  | "softImpact"
+  | "success"
+  | "wrong";
+
 export type AppSettings = {
   schemaVersion: 1;
   mode: GameMode;
   level: Level;
   soundEnabled: boolean;
+  soundVolume: number;
+  hapticsEnabled: boolean;
   setupCompleted: boolean;
 };
 
@@ -229,10 +276,12 @@ type AppState = {
 
 | key | 内容 |
 | --- | --- |
-| `sansu-jellies:settings:v1` | mode、level、soundEnabled、setupCompleted |
+| `sansu-jellies:settings:v1` | mode、level、soundEnabled、soundVolume、hapticsEnabled、setupCompleted |
 | `sansu-jellies:progress:v1` | 解答数、正解数、連続正解、直近問題 |
 
 読み込みに失敗した場合は初期値に戻す。schemaVersion が違う場合も破棄して初期化する。
+
+`soundVolume` は初期値 `0.8`。`hapticsEnabled` は初期値 `true`。MVPのUIでは音量スライダーは出さずON/OFFだけでもよいが、内部的には音量を持たせておく。
 
 ## 6. 問題生成
 
@@ -330,7 +379,7 @@ MVPでは完全操作を後回しにするが、生成器は以下の条件に�
 1. アプリ起動。
 2. `SplashScreen` を表示。
 3. LocalStorage に設定がなければ `SetupScreen` を表示。
-4. 保護者がモード、レベル、音を選択。
+4. 保護者がモード、レベル、音、ブルブルを選択。
 5. `このせっていではじめる` でゲーム開始。
 
 ### 9.2 通常フロー
@@ -489,6 +538,7 @@ type CharacterProps = {
 - モード選択: 足し算、引き算。
 - レベル選択: レベル1、2、3。
 - 音: ON/OFF。
+- ブルブル: ON/OFF。
 - 進捗リセット。
 - ゲームに戻る。
 
@@ -512,9 +562,287 @@ type CharacterProps = {
 - キャラは `excited`。
 - ゼリーは揃ってぷるんとする。
 
-## 11. デザイン指針
+## 11. サウンド設計
 
-### 11.1 色
+### 11.1 位置づけ
+
+サウンドはMVPの重要要素とする。ゼリーを掴んだ、置いた、正解した、次へ進んだ、という手応えを短いSEで返し、幼児が操作と結果の関係を理解しやすくする。
+
+音は演出を盛り上げるためだけでなく、以下の役割を持つ。
+
+- ドラッグ開始を知らせる。
+- ドロップ成功と失敗を区別する。
+- 正解を嬉しい出来事として強調する。
+- 不正解を責めず、軽い「もう一回」の合図にする。
+- 長押しメニューなど保護者操作にも控えめな確認音を返す。
+
+### 11.2 音イベント
+
+| SoundId | タイミング | 音の方向性 | 長さ目安 | 優先度 |
+| --- | --- | --- | --- | --- |
+| `jellyGrab` | ゼリーを掴んだ瞬間 | ぷにっ、短い柔らかい音 | 80-160ms | MVP |
+| `jellyDrop` | ドロップ失敗で戻る | ぽすっ、軽く置いた音 | 80-180ms | MVP |
+| `jellySnap` | 集約エリアに置けた | ぽよん、明るいスナップ音 | 120-240ms | MVP |
+| `answerCorrect` | 正解ボタンを押した瞬間 | きらっ、短い成功音 | 200-500ms | MVP |
+| `successFanfare` | 正解演出開始 | 小さなファンファーレ | 600-1200ms | MVP |
+| `answerWrong` | 不正解ボタンを押した瞬間 | こつん、低すぎない控えめ音 | 120-280ms | MVP |
+| `uiTap` | 設定、次問題など | 軽いタップ音 | 50-120ms | MVP |
+| `menuOpen` | 長押しメニューが開いた | 控えめな開閉音 | 120-260ms | MVP |
+| `nextProblem` | 次問題へ進む | すっと切り替わる音 | 120-240ms | 任意 |
+
+### 11.3 音源素材方針
+
+- 無料SEを使う場合は、可能ならCC0またはパブリックドメイン相当を優先する。
+- クレジット必須素材は、アプリ内に外部リンクを置かない方針と衝突しやすいため避ける。
+- 素材を追加するときは `src/assets/sounds/README.md` に、ファイル名、配布元名、URL、ライセンス、取得日、加工有無を記録する。
+- 音源ファイル名は用途で付ける。例: `jelly-grab.webm`、`answer-correct.webm`。
+- 同じイベントに複数候補を持てるよう、manifestは配列を許容する。
+- 形式は軽量な `webm` または `mp3` を優先する。互換性が必要なら同じ音の複数形式をmanifestで定義する。
+
+### 11.4 実装方式
+
+MVPでは小さな `SoundManager` を作る。
+
+- 初回ユーザー操作でAudioContextまたはHTMLAudioElementをアンロックする。
+- `soundEnabled === false` の場合は即returnする。
+- 同じ音が短時間に重なりすぎないよう、SoundIdごとに最小再生間隔を持つ。
+- ドラッグ中の連続再生は避け、`jellyGrab` はpointerdown時に1回だけ鳴らす。
+- 正解時は `answerCorrect` と `successFanfare` がうるさく重なりすぎないよう、30-120ms程度ずらす。
+- メニューを開いている間も音ON/OFFは即反映する。
+- 音源読み込みに失敗してもゲームは止めない。
+
+### 11.5 `soundManifest.ts` 案
+
+```ts
+export type SoundConfig = {
+  id: SoundId;
+  sources: string[];
+  volume: number;
+  minIntervalMs: number;
+};
+
+export const SOUND_MANIFEST: SoundConfig[] = [
+  {
+    id: "jellyGrab",
+    sources: ["/sounds/jelly-grab.webm", "/sounds/jelly-grab.mp3"],
+    volume: 0.45,
+    minIntervalMs: 80,
+  },
+  {
+    id: "jellySnap",
+    sources: ["/sounds/jelly-snap.webm", "/sounds/jelly-snap.mp3"],
+    volume: 0.55,
+    minIntervalMs: 120,
+  },
+];
+```
+
+実際のVite実装では、`new URL("../assets/sounds/...", import.meta.url).href` で解決する。
+
+### 11.6 音量・ミックス
+
+- 幼児向けなので、初期音量は控えめにする。
+- `jellyGrab` と `jellySnap` は短く、毎回聞いても疲れない音にする。
+- `successFanfare` は気持ちよさを出すが、連続プレイの邪魔にならない長さにする。
+- 不正解音は低いブザーにしない。否定感の強い音を避ける。
+- BGMはMVPでは入れない。SEの意味が薄れるため。
+
+### 11.7 モバイル・PWA制約
+
+- iOS Safariなどでは、ユーザー操作前の音声再生はブロックされる。
+- スプラッシュの `タップしてはじめる`、初回設定の開始ボタン、または最初のゼリー操作で音声をアンロックする。
+- 音ONでも、アンロック前は無理に再生せず、最初の有効操作で初期化する。
+- PWAインストール後も同じ制約がある前提で実装する。
+
+### 11.8 テスト観点
+
+- 音OFFではすべてのSEが鳴らない。
+- 音ONに戻すと次の操作から鳴る。
+- 初回操作後に音声がアンロックされる。
+- 連打しても同じSEが過剰に重ならない。
+- 音源ロード失敗時にゲームが止まらない。
+- 正解時に `answerCorrect` と `successFanfare` の順序が自然。
+
+## 12. 操作フィードバック設計
+
+### 12.1 調査メモ
+
+参考にした公式・一次情報:
+
+- MDN / W3C: Webで利用できる触覚フィードバックは Vibration API が中心。`navigator.vibrate()` は単発またはオン/オフ配列のパターンを受け取る。未対応デバイスでは何もしない。
+- W3C Vibration API: 仕様は単純な振動機構へのアクセスを定義しており、高度なハプティクスは対象外。
+- Apple HIG: ハプティクスは視覚・音と補完関係にし、因果関係が分かる場面で一貫して使う。使いすぎは避ける。
+- Android Developers: 頻度の高い操作のハプティクスは非常に控えめにする。視覚・音・触覚は同期させる。長く濁った振動は避ける。
+- MDN Pointer Events / `touch-action`: ドラッグ中にブラウザのスクロールやズームへ奪われないよう、対象領域の `touch-action` を設計する。
+- MDN Web Animations API: JavaScriptからブラウザのアニメーションエンジンを制御でき、操作イベントと同期した短いアニメーションに向く。
+- Motion for React: 物理寄りの spring は `stiffness`、`damping`、`mass`、`bounce` で調整できる。MVPでは依存追加せず、必要なら後続で導入候補にする。
+
+### 12.2 方針
+
+視覚、サウンド、ハプティクスを別々に鳴らすのではなく、同じ `FeedbackEventId` を起点に同期させる。
+
+```txt
+ユーザー操作
+  -> FeedbackEventId
+  -> visualFeedback
+  -> soundManager
+  -> haptics
+```
+
+ハプティクスは対応端末だけで動く補助とし、ゲームの手触りは必ず視覚フィードバックとサウンドで成立させる。
+
+### 12.3 フィードバックイベント表
+
+| FeedbackEventId | タイミング | 視覚 | サウンド | ハプティクス |
+| --- | --- | --- | --- | --- |
+| `jellyPress` | ゼリーを押した瞬間 | 0.96倍に軽く潰れる、影が下がる | なし、または極小 | `tap` |
+| `jellyDragStart` | ドラッグ開始 | 1.08倍、指に吸い付く、光沢が少し強くなる | `jellyGrab` | `softTick` |
+| `jellyDragMove` | 移動中 | 速度に応じて傾き、進行方向と逆に少し伸びる | 原則なし | 原則なし |
+| `jellyDropMiss` | 置けない場所で離す | ぷるっと戻る、短い横揺れ | `jellyDrop` | `softTick` |
+| `jellyDropSuccess` | 移動先に置けた | 縦に潰れてから跳ねる、スナップ位置へ吸着 | `jellySnap` | `softImpact` |
+| `jellyMergeComplete` | 必要数が集まった | 集約エリア全体が一度だけ弾む | なし、または短い補助音 | `softImpact` |
+| `answerPress` | 回答ボタン押下 | ボタンが軽く沈む | `uiTap` | `tap` |
+| `answerWrong` | 不正解 | 選んだボタンだけ小さく揺れる、キャラむむ顔 | `answerWrong` | `wrong` |
+| `answerCorrect` | 正解 | 正解ボタン、式、ゼリー、キャラを同期して喜ばせる | `answerCorrect` + `successFanfare` | `success` |
+| `menuLongPressProgress` | 長押し中 | つまみの進捗リング | なし | なし |
+| `menuOpen` | メニューが開く | モーダルが短く拡大フェード | `menuOpen` | `softTick` |
+| `nextProblem` | 次問題へ | 画面内容を短く入れ替える | `nextProblem` | `tap` |
+
+### 12.4 ゼリーの視覚フィードバック
+
+ゼリーはCSS変数で状態を表し、`transform` と `opacity` 中心で動かす。`width`、`height`、`top`、`left` を毎フレーム変えない。
+
+```css
+.jelly {
+  transform:
+    translate3d(var(--jelly-x, 0), var(--jelly-y, 0), 0)
+    rotate(var(--jelly-rotate, 0deg))
+    scaleX(var(--jelly-scale-x, 1))
+    scaleY(var(--jelly-scale-y, 1));
+}
+```
+
+状態別の目安:
+
+| 状態 | scaleX | scaleY | rotate | duration |
+| --- | ---: | ---: | ---: | ---: |
+| idle | 1.00 | 1.00 | 0deg | - |
+| press | 1.06 | 0.94 | 0deg | 80ms |
+| drag | 1.08 | 1.04 | 速度依存で最大±8deg | 即時追従 |
+| drop success 1 | 1.14 | 0.86 | 0deg | 90ms |
+| drop success 2 | 0.94 | 1.10 | 0deg | 120ms |
+| settle | 1.00 | 1.00 | 0deg | 180ms |
+| drop miss | 1.04 | 0.96 | 最大±6deg | 240ms |
+
+移動中の「ぷるん」は、ポインタ座標へ完全固定せず、表示位置を少し遅れて追従させると出しやすい。ただし幼児向けなので遅れは小さくする。
+
+- 実座標: pointer位置。
+- 表示座標: 前フレーム表示座標 + `(実座標 - 前フレーム表示座標) * 0.35`。
+- 速度から `rotate` と `scaleX/scaleY` を算出する。
+- 最大遅れは12px程度に制限する。
+
+### 12.5 アニメーション実装
+
+MVPは依存を増やさず、CSS keyframes と Web Animations API を併用する。
+
+- ドラッグ中の位置更新: `requestAnimationFrame` でCSS変数を書き換える。
+- 押下、成功、失敗などの短い一発演出: `element.animate()` を使う。
+- 正解時の複数要素演出: CSS class と `animationend`、または `Animation.finished` で制御する。
+- 後続で Motion for React を導入する場合は、ゼリーだけを対象にし、画面全体をライブラリ依存にしない。
+
+推奨プリセット:
+
+```ts
+const JELLY_ANIMATION_PRESETS = {
+  press: { duration: 80, easing: "cubic-bezier(.2, .8, .2, 1)" },
+  dropSuccess: { duration: 390, easing: "cubic-bezier(.18, .89, .32, 1.28)" },
+  dropMiss: { duration: 260, easing: "cubic-bezier(.36, .07, .19, .97)" },
+  mergeComplete: { duration: 420, easing: "cubic-bezier(.18, .89, .32, 1.28)" },
+  correct: { duration: 700, easing: "cubic-bezier(.2, .8, .2, 1)" },
+};
+```
+
+### 12.6 ハプティクス実装
+
+Web/PWAでは `navigator.vibrate()` を薄い補助として使う。
+
+```ts
+const HAPTIC_PATTERNS: Record<HapticPatternId, number | number[]> = {
+  none: 0,
+  tap: 8,
+  softTick: 12,
+  softImpact: 18,
+  success: [18, 35, 28],
+  wrong: [12, 30, 12],
+};
+```
+
+実装ルール:
+
+- `settings.hapticsEnabled` を持たせる。初期値は `true`。
+- `settings.soundEnabled` とは分ける。保護者メニューでは `おと` と `ブルブル` を別項目にする。
+- `navigator.vibrate` が存在しない場合は何もしない。
+- `navigator.vibrate(...)` が `false` を返した場合もエラー扱いにしない。
+- ドラッグ移動中は原則鳴らさない。頻度が高く、うるさくなりやすい。
+- 連続再生を避けるため、ハプティクスにも `minIntervalMs` を設ける。
+- `document.visibilityState !== "visible"` のときは鳴らさない。
+- `prefers-reduced-motion: reduce` の場合は `success` 以外を基本OFF、または全体を弱くする。
+
+### 12.7 `FeedbackManager` 案
+
+```ts
+type FeedbackOptions = {
+  visualTarget?: HTMLElement | null;
+  soundEnabled: boolean;
+  hapticsEnabled: boolean;
+  reducedMotion: boolean;
+};
+
+export function playFeedback(eventId: FeedbackEventId, options: FeedbackOptions) {
+  playVisualFeedback(eventId, options.visualTarget, options.reducedMotion);
+  playSoundForFeedback(eventId, options.soundEnabled);
+  playHapticForFeedback(eventId, {
+    enabled: options.hapticsEnabled,
+    reducedMotion: options.reducedMotion,
+  });
+}
+```
+
+`useDragJellies` は直接 `soundManager` や `haptics` を呼ばず、`playFeedback("jellyDragStart")` のようにイベントだけを通知する。
+
+### 12.8 保護者メニュー追加
+
+メニュー項目を以下に拡張する。
+
+- 音 ON/OFF
+- ブルブル ON/OFF
+
+`ブルブル` は未対応端末では表示してもよいが、実際には何も起きない。初期設定画面では説明を増やしすぎず、保護者メニュー内で小さく `きかないたんまつもあります` と表示する。
+
+### 12.9 アクセシビリティと安全性
+
+- `prefers-reduced-motion` を尊重し、ぷるぷる量、紙吹雪、ジャンプを弱める。
+- ハプティクスは短く、頻度を低くする。
+- 成功時以外の振動は20ms以下を基本にする。
+- 不正解の振動は警告感を出しすぎない。
+- `touch-action: none` はゼリー操作エリアに限定し、画面全体の拡大操作を不必要に阻害しない。
+- 操作できる要素には十分なタップ領域を確保する。
+
+### 12.10 テスト観点
+
+- ゼリーを押した瞬間に潰れる。
+- 掴んだ瞬間に拡大し、音と軽い振動が同期する。
+- 移動中にゼリーが指から大きく遅れない。
+- 成功ドロップでスナップ、ぷるん、音、振動が同じタイミングで起きる。
+- 失敗ドロップで責める表現にならず、元位置へ戻る。
+- Android端末で `navigator.vibrate` が動く場合に短い振動が出る。
+- iOSなど非対応端末でエラーにならない。
+- `ブルブルOFF` で振動が止まる。
+- `prefers-reduced-motion` で動きが控えめになる。
+
+## 13. デザイン指針
+
+### 13.1 色
 
 - 背景: 白から薄いクリーム。
 - 青ゼリー: 左の数。
@@ -523,39 +851,45 @@ type CharacterProps = {
 - 緑: 引き算の将来拡張や補助表示。
 - 文字: 濃いグレー。黒すぎないが、コントラストは確保する。
 
-### 11.2 タイポグラフィ
+### 13.2 タイポグラフィ
 
 - 外部フォントは使わず、システムフォントから開始する。
 - 数字は大きく、記号は十分な余白を持たせる。
 - 説明文は最小限にする。
 
-### 11.3 モーション
+### 13.3 モーション
 
 - 基本は150msから300ms。
 - 正解演出のみ400msから800ms。
 - ぷるぷる、跳ね、紙吹雪は `prefers-reduced-motion` で軽減または停止。
 - レイアウトが跳ねないよう、ボタン・ゼリー・キャラの領域を固定する。
 
-## 12. エラー・例外設計
+## 14. エラー・例外設計
 
 - LocalStorage が使えない場合はメモリ状態で動作する。
 - 不正な保存値は破棄する。
+- 音源が読み込めない場合でもゲーム進行を止めない。
+- ブラウザが音声再生をブロックした場合は、次のユーザー操作で再試行する。
+- `navigator.vibrate` が未対応、または `false` を返してもゲーム進行を止めない。
 - 画面が狭い場合でも横スクロールを出さない。
 - ドラッグ中に画面外へ出た場合は元の位置へ戻す。
 - メニュー表示中はゲーム操作を停止する。
 - 正解後は回答ボタンを押せない。
 
-## 13. テスト方針
+## 15. テスト方針
 
-### 13.1 単体テスト候補
+### 15.1 単体テスト候補
 
 - 足し算問題生成が `answer <= 10` を守る。
 - 引き算問題生成が `right <= left` を守る。
 - 4択生成が正解を含み、重複がなく、0から10に収まる。
 - LocalStorageの読み込みで壊れたJSONを安全に処理する。
 - レベルごとの回答可能条件が正しい。
+- SoundManagerが音OFF、最小再生間隔、ロード失敗を安全に扱う。
+- Hapticsが未対応端末、OFF設定、最小再生間隔を安全に扱う。
+- FeedbackManagerがイベントごとに視覚、音、振動を正しくディスパッチする。
 
-### 13.2 手動確認
+### 15.2 手動確認
 
 - 375x667、390x844、430x932で表示崩れがない。
 - タップ領域が小さすぎない。
@@ -564,10 +898,16 @@ type CharacterProps = {
 - レベル1では合計値が出る。
 - レベル2では合計値が出ない。
 - レベル3ではドラッグできない。
+- 音ON/OFFが即反映される。
+- 掴む、置く、正解、不正解のSEが意図したタイミングで鳴る。
+- ゼリーの押下、ドラッグ、成功ドロップ、失敗ドロップのぷるん演出が自然。
+- 対応端末ではハプティクスが短く控えめに鳴る。
+- 非対応端末では何も壊れない。
+- `prefers-reduced-motion` で過度な動きが減る。
 - 不正解後に続けて回答できる。
 - 正解後に式が完成し、次問題ボタンで進める。
 
-## 14. MVP完了条件
+## 16. MVP完了条件
 
 - 足し算モードが遊べる。
 - レベル1、2、3の差が実装されている。
@@ -578,6 +918,10 @@ type CharacterProps = {
 - レベル3ではゼリーが操作不可。
 - 正解・不正解判定ができる。
 - 赤いキャラクターが状態に応じて最低限変化する。
+- ゼリーの掴む、移動、置く、戻るの視覚フィードバックが実装されている。
+- 対応端末で基本ハプティクスが鳴り、非対応端末でも安全に動く。
+- 掴む、置く、正解、不正解、メニュー操作の基本SEが鳴る。
+- 音ON/OFFが保存され、即反映される。
 - 長押しメニューが通常タップで開かない。
 - LocalStorage に設定と進捗が保存される。
 - スマホ縦画面で破綻しない。
