@@ -23,7 +23,7 @@
 - [ ] `src/audio/soundManifest.ts` を作る。
 - [ ] `src/audio/soundManager.ts` を作る。
 - [ ] `src/assets/sounds/README.md` に音源ライセンス記録フォーマットを作る。
-- [ ] `src/feedback/feedbackTypes.ts` を作る。
+- [ ] `src/feedback/feedbackTypes.ts` を作り、`FeedbackEventId` と `HapticPatternId` を定義する。
 - [ ] `src/feedback/visualFeedback.ts` を作る。
 - [ ] `src/feedback/haptics.ts` を作る。
 - [ ] `src/feedback/feedbackManager.ts` を作る。
@@ -116,8 +116,6 @@
 
 ## Phase 9: 視覚フィードバック / ハプティクス
 
-- [ ] `FeedbackEventId` を定義する。
-- [ ] `HapticPatternId` を定義する。
 - [ ] `playFeedback(eventId)` から視覚、音、振動を同期して呼び出す。
 - [ ] `jellyPress` でゼリーが軽く潰れる演出を実装する。
 - [ ] `jellyDragStart` で拡大、光沢強調、掴んだ手触りを実装する。
@@ -130,8 +128,7 @@
 - [ ] `tap`, `softTick`, `softImpact`, `success`, `wrong` の振動パターンを定義する。
 - [ ] ハプティクスの最小再生間隔を実装する。
 - [ ] `document.visibilityState !== "visible"` のとき振動しないようにする。
-- [ ] `settings.hapticsEnabled` を追加しLocalStorageに保存する。
-- [ ] 保護者メニューに `ブルブル ON/OFF` を追加する。
+- [ ] `settings.hapticsEnabled` を参照してハプティクスON/OFFを反映する。
 - [ ] 非対応端末で例外が出ないことを確認する。
 - [ ] `prefers-reduced-motion` 時に視覚演出と振動を弱める。
 

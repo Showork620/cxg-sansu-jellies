@@ -16,7 +16,7 @@
 | --- | --- | --- |
 | 初回起動 | スクショにはスプラッシュと初回設定画面があるが、指示書では通常画面のみ中心 | 初回のみ `SplashScreen` と `SetupScreen` を表示し、以後は長押しメニューから設定変更 |
 | PWA詳細 | manifest、Service Worker、GitHub Pages の base path が未定 | `vite-plugin-pwa` 想定、`base` はリポジトリ名に合わせて設定可能にする |
-| LocalStorage schema | 保存対象とバージョン管理が未定 | `settings`、`progress`、`problemHistory` を明確化し、schema version を持たせる |
+| LocalStorage schema | 保存対象とバージョン管理が未定 | `settings` と `progress.lastProblemIds` を明確化し、schema version を持たせる |
 | 長押し条件 | 長押し時間、キャンセル条件、視覚フィードバックが未定 | 1000ms以上で開く。移動、pointer cancel、離した場合は中止。進捗リングで示す |
 | ドラッグ操作 | スマホでの pointer/touch 対応、ドロップ判定、操作不能時の挙動が未定 | Pointer Events で統一。ドロップエリア矩形との交差で判定。レベル3はドラッグ不可 |
 | 回答可能条件 | ゼリー操作完了前に回答できるかが曖昧 | レベル1/2は移動後に回答可能。未操作でも選択肢は見せるが disabled にする |
@@ -25,6 +25,7 @@
 | 連続問題制御 | 「連続しすぎない」の具体ルールが未定 | 直近3問と完全一致を避ける。候補が少ない場合は最大20回リトライ |
 | 成功演出 | 次問題への遷移タイミングが未定 | 自動遷移なし。`つぎのもんだいへ` を押したときだけ進む |
 | 音 | サウンドは体験上重要だが、指示書ではON/OFFと後回し項目のみで、再生設計・素材管理・モバイル制約が未定 | サウンドをMVPの重要要素に昇格。掴む、置く、正解、不正解、メニュー操作のSEを定義し、無料SEのライセンス管理と音声アンロックを設計に含める |
+| 触覚・視覚フィードバック | ゼリーのぷるん感、移動時の手触り、ハプティクスの対応範囲が未定 | `FeedbackEventId` を起点に、視覚・音・振動を同期する。Web/PWAでは振動非対応端末があるため、視覚と音だけでも成立するようにする |
 | アクセシビリティ | 低年齢向けの文字サイズ、タップ領域、motion配慮が未定 | 最小タップ44px以上、数字は大きく、`prefers-reduced-motion` 対応 |
 | 外部リソース | 外部リンクなしのためフォント/CDN利用が曖昧 | 初期実装はシステムフォントまたは同梱アセットのみ使用 |
 | キャラクター実装 | SVG/CSS/Canvas の方式が未定 | MVPはReact SVGコンポーネント。表情はpropsで切替 |
@@ -35,7 +36,7 @@
 - 通常プレイ画面には閉じる、戻る、設定ボタンを置かない。
 - 初回起動だけは、スクショに合わせてスプラッシュ後に保護者向け設定画面を出す。
 - モード・レベルは自動変更しない。親が明示的に変更するまで固定する。
-- MVPでは足し算と基本サウンド体験を完成させる。引き算は設計と型だけ先に通す。
+- MVPでは足し算と基本フィードバック体験、つまり視覚・音・対応端末での振動を完成させる。引き算は設計と型だけ先に通す。
 - レベル1/2の操作は「右側ゼリーを下段の集約エリアへ移動する」方式に統一する。
 - レベル1は集約エリア付近に大きく合計値を表示する。レベル2は表示しない。
 - レベル3はゼリーを薄く補助表示するが、ドラッグ不可にする。
@@ -237,6 +238,7 @@ export type AppSettings = {
 };
 
 export type ProgressState = {
+  schemaVersion: 1;
   totalAnswered: number;
   totalCorrect: number;
   currentStreak: number;
@@ -276,8 +278,8 @@ type AppState = {
 
 | key | 内容 |
 | --- | --- |
-| `sansu-jellies:settings:v1` | mode、level、soundEnabled、soundVolume、hapticsEnabled、setupCompleted |
-| `sansu-jellies:progress:v1` | 解答数、正解数、連続正解、直近問題 |
+| `sansu-jellies:settings:v1` | schemaVersion、mode、level、soundEnabled、soundVolume、hapticsEnabled、setupCompleted |
+| `sansu-jellies:progress:v1` | schemaVersion、解答数、正解数、連続正解、直近問題 |
 
 読み込みに失敗した場合は初期値に戻す。schemaVersion が違う場合も破棄して初期化する。
 
@@ -624,20 +626,26 @@ export type SoundConfig = {
 export const SOUND_MANIFEST: SoundConfig[] = [
   {
     id: "jellyGrab",
-    sources: ["/sounds/jelly-grab.webm", "/sounds/jelly-grab.mp3"],
+    sources: [
+      new URL("../assets/sounds/jelly-grab.webm", import.meta.url).href,
+      new URL("../assets/sounds/jelly-grab.mp3", import.meta.url).href,
+    ],
     volume: 0.45,
     minIntervalMs: 80,
   },
   {
     id: "jellySnap",
-    sources: ["/sounds/jelly-snap.webm", "/sounds/jelly-snap.mp3"],
+    sources: [
+      new URL("../assets/sounds/jelly-snap.webm", import.meta.url).href,
+      new URL("../assets/sounds/jelly-snap.mp3", import.meta.url).href,
+    ],
     volume: 0.55,
     minIntervalMs: 120,
   },
 ];
 ```
 
-実際のVite実装では、`new URL("../assets/sounds/...", import.meta.url).href` で解決する。
+音源がまだ入っていない開発初期は、該当 `SoundId` を no-op として扱い、ゲーム進行を止めない。
 
 ### 11.6 音量・ミックス
 
@@ -669,13 +677,13 @@ export const SOUND_MANIFEST: SoundConfig[] = [
 
 参考にした公式・一次情報:
 
-- MDN / W3C: Webで利用できる触覚フィードバックは Vibration API が中心。`navigator.vibrate()` は単発またはオン/オフ配列のパターンを受け取る。未対応デバイスでは何もしない。
-- W3C Vibration API: 仕様は単純な振動機構へのアクセスを定義しており、高度なハプティクスは対象外。
-- Apple HIG: ハプティクスは視覚・音と補完関係にし、因果関係が分かる場面で一貫して使う。使いすぎは避ける。
-- Android Developers: 頻度の高い操作のハプティクスは非常に控えめにする。視覚・音・触覚は同期させる。長く濁った振動は避ける。
-- MDN Pointer Events / `touch-action`: ドラッグ中にブラウザのスクロールやズームへ奪われないよう、対象領域の `touch-action` を設計する。
-- MDN Web Animations API: JavaScriptからブラウザのアニメーションエンジンを制御でき、操作イベントと同期した短いアニメーションに向く。
-- Motion for React: 物理寄りの spring は `stiffness`、`damping`、`mass`、`bounce` で調整できる。MVPでは依存追加せず、必要なら後続で導入候補にする。
+- [MDN Vibration API](https://developer.mozilla.org/en-US/docs/Web/API/Vibration_API): Webで利用できる触覚フィードバックは Vibration API が中心。`navigator.vibrate()` は単発またはオン/オフ配列のパターンを受け取る。未対応デバイスでは何もしない。
+- [W3C Vibration API](https://w3c.github.io/vibration/): 仕様は単純な振動機構へのアクセスを定義しており、高度なハプティクスは対象外。
+- [Apple HIG: Playing haptics](https://developer.apple.com/design/human-interface-guidelines/playing-haptics): ハプティクスは視覚・音と補完関係にし、因果関係が分かる場面で一貫して使う。使いすぎは避ける。
+- [Android Developers: Haptics design principles](https://developer.android.com/develop/ui/views/haptics/haptics-principles): 頻度の高い操作のハプティクスは非常に控えめにする。視覚・音・触覚は同期させる。長く濁った振動は避ける。
+- [MDN Pointer Events](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events) / [MDN touch-action](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/touch-action): ドラッグ中にブラウザのスクロールやズームへ奪われないよう、対象領域の `touch-action` を設計する。
+- [MDN Web Animations API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Animations_API/Using_the_Web_Animations_API): JavaScriptからブラウザのアニメーションエンジンを制御でき、操作イベントと同期した短いアニメーションに向く。
+- [Motion for React transitions](https://motion.dev/docs/react-transitions): 物理寄りの spring は `stiffness`、`damping`、`mass`、`bounce` で調整できる。MVPでは依存追加せず、必要なら後続で導入候補にする。
 
 ### 12.2 方針
 
@@ -922,6 +930,8 @@ export function playFeedback(eventId: FeedbackEventId, options: FeedbackOptions)
 - 対応端末で基本ハプティクスが鳴り、非対応端末でも安全に動く。
 - 掴む、置く、正解、不正解、メニュー操作の基本SEが鳴る。
 - 音ON/OFFが保存され、即反映される。
+- ブルブルON/OFFが保存され、即反映される。
 - 長押しメニューが通常タップで開かない。
 - LocalStorage に設定と進捗が保存される。
 - スマホ縦画面で破綻しない。
+- GitHub Pages向けにbuildできる。
