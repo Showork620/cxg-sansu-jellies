@@ -25,8 +25,17 @@ export function useDragJellies(options: {
     element.style.setProperty("--jelly-x", "0px");
     element.style.setProperty("--jelly-y", "0px");
     element.style.setProperty("--jelly-rotate", "0deg");
+    element.style.setProperty("--jelly-skew", "0deg");
     element.style.setProperty("--jelly-scale-x", "1");
     element.style.setProperty("--jelly-scale-y", "1");
+    element.style.removeProperty("opacity");
+    element.style.removeProperty("pointer-events");
+    element.classList.remove("is-dragging");
+  }, []);
+
+  const hidePlacedElement = useCallback((element: HTMLElement) => {
+    element.style.setProperty("opacity", "0");
+    element.style.setProperty("pointer-events", "none");
     element.classList.remove("is-dragging");
   }, []);
 
@@ -36,47 +45,61 @@ export function useDragJellies(options: {
     }
 
     state.rafId = window.requestAnimationFrame(() => {
-      const lagX = Math.max(-12, Math.min(12, velocityX * -0.04));
-      const rotation = Math.max(-8, Math.min(8, velocityX * 0.08));
+      const velocity = Math.abs(velocityX);
+      const lagX = Math.max(-16, Math.min(16, velocityX * -0.12));
+      const rotation = Math.max(-14, Math.min(14, velocityX * 0.16));
+      const skew = Math.max(-10, Math.min(10, velocityX * -0.18));
+      const stretchX = Math.min(1.22, 1.06 + velocity * 0.012);
+      const stretchY = Math.max(0.88, 1.02 - velocity * 0.007);
 
       state.element.style.setProperty("--jelly-x", `${dx + lagX}px`);
       state.element.style.setProperty("--jelly-y", `${dy}px`);
       state.element.style.setProperty("--jelly-rotate", `${rotation}deg`);
-      state.element.style.setProperty("--jelly-scale-x", "1.08");
-      state.element.style.setProperty("--jelly-scale-y", "1.04");
+      state.element.style.setProperty("--jelly-skew", `${skew}deg`);
+      state.element.style.setProperty("--jelly-scale-x", stretchX.toFixed(3));
+      state.element.style.setProperty("--jelly-scale-y", stretchY.toFixed(3));
     });
   }, []);
+
+  const startDrag = useCallback(
+    (jellyId: string, element: HTMLElement, event: React.PointerEvent<HTMLElement>) => {
+      if (options.disabled || event.button !== 0) {
+        return false;
+      }
+
+      event.preventDefault();
+      element.setPointerCapture(event.pointerId);
+      element.classList.add("is-dragging");
+
+      dragStateRef.current = {
+        id: jellyId,
+        element,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        lastX: event.clientX,
+        lastY: event.clientY,
+        rafId: null
+      };
+
+      playFeedback("jellyPress", {
+        ...options.feedbackOptions,
+        visualTarget: element
+      });
+      playFeedback("jellyDragStart", {
+        ...options.feedbackOptions,
+        visualTarget: element
+      });
+
+      return true;
+    },
+    [options.disabled, options.feedbackOptions]
+  );
 
   const getHandlers = useCallback(
     (jellyId: string) => ({
       onPointerDown: (event: React.PointerEvent<HTMLElement>) => {
-        if (options.disabled || event.button !== 0) {
-          return;
-        }
-
-        event.preventDefault();
-        event.currentTarget.setPointerCapture(event.pointerId);
-        event.currentTarget.classList.add("is-dragging");
-
-        dragStateRef.current = {
-          id: jellyId,
-          element: event.currentTarget,
-          pointerId: event.pointerId,
-          startX: event.clientX,
-          startY: event.clientY,
-          lastX: event.clientX,
-          lastY: event.clientY,
-          rafId: null
-        };
-
-        playFeedback("jellyPress", {
-          ...options.feedbackOptions,
-          visualTarget: event.currentTarget
-        });
-        playFeedback("jellyDragStart", {
-          ...options.feedbackOptions,
-          visualTarget: event.currentTarget
-        });
+        startDrag(jellyId, event.currentTarget, event);
       },
       onPointerMove: (event: React.PointerEvent<HTMLElement>) => {
         const state = dragStateRef.current;
@@ -122,7 +145,7 @@ export function useDragJellies(options: {
             ...options.feedbackOptions,
             visualTarget: event.currentTarget
           });
-          resetElement(event.currentTarget);
+          hidePlacedElement(event.currentTarget);
           options.onDropSuccess(jellyId);
         } else {
           playFeedback("jellyDropMiss", {
@@ -143,8 +166,8 @@ export function useDragJellies(options: {
         }
       }
     }),
-    [options, resetElement, scheduleMove]
+    [hidePlacedElement, options, resetElement, scheduleMove, startDrag]
   );
 
-  return { getHandlers };
+  return { getHandlers, startDrag };
 }

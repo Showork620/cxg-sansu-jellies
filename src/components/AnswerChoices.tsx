@@ -12,7 +12,6 @@ type AnswerChoicesProps = {
 function AnswerChoices({ choices, selectedAnswer, correctAnswer, disabled, gameState, onSelect }: AnswerChoicesProps) {
   return (
     <div className="answer-area">
-      <p className="answer-label">こたえをえらぼう</p>
       <div className="answer-grid">
         {choices.map((choice) => {
           const isSelected = selectedAnswer === choice;

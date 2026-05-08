@@ -4,6 +4,7 @@ export type FeedbackEventId =
   | "jellyDragMove"
   | "jellyDropMiss"
   | "jellyDropSuccess"
+  | "jellyPackTighten"
   | "jellyMergeComplete"
   | "answerPress"
   | "answerWrong"

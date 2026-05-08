@@ -28,6 +28,11 @@ type RoundState = {
   placedRightIds: string[];
 };
 
+const READING_DURATION_MS = 3100;
+const DROPPING_DURATION_MS = 2200;
+const REDUCED_MOTION_READING_DURATION_MS = 280;
+const REDUCED_MOTION_DROPPING_DURATION_MS = 180;
+
 function getInitialGameState(problem: Problem, settings: Pick<AppSettings, "mode" | "level">): GameState {
   if (settings.mode === "subtraction") {
     return "answering";
@@ -42,11 +47,12 @@ function getInitialGameState(problem: Problem, settings: Pick<AppSettings, "mode
 
 function createRound(settings: Pick<AppSettings, "mode" | "level">, lastProblemIds: string[]): RoundState {
   const problem = generateProblem(settings.mode, settings.level, lastProblemIds);
+  const initialGameState = getInitialGameState(problem, settings);
 
   return {
     problem,
     choices: generateChoices(problem.answer),
-    gameState: getInitialGameState(problem, settings),
+    gameState: initialGameState === "manipulating" ? "presenting" : initialGameState,
     selectedAnswer: null,
     placedRightIds: []
   };
@@ -87,6 +93,22 @@ function GameScreen({ settings, progress, onSettingsChange, onProgressChange }: 
     progressRef.current = progress;
   }, [progress]);
 
+  useEffect(() => {
+    const preventGameScreenScroll = (event: TouchEvent) => {
+      const target = event.target;
+
+      if (target instanceof Element && target.closest(".parent-menu")) {
+        return;
+      }
+
+      event.preventDefault();
+    };
+
+    document.addEventListener("touchmove", preventGameScreenScroll, { passive: false });
+
+    return () => document.removeEventListener("touchmove", preventGameScreenScroll);
+  }, []);
+
   const resetRound = useCallback(
     (lastProblemIds: string[]) => {
       setRound(createRound({ mode: settings.mode, level: settings.level }, lastProblemIds));
@@ -97,6 +119,40 @@ function GameScreen({ settings, progress, onSettingsChange, onProgressChange }: 
   useEffect(() => {
     resetRound(progressRef.current.lastProblemIds);
   }, [resetRound]);
+
+  useEffect(() => {
+    if (round.gameState !== "presenting" && round.gameState !== "dropping") {
+      return;
+    }
+
+    const phaseDuration =
+      round.gameState === "presenting"
+        ? reducedMotion
+          ? REDUCED_MOTION_READING_DURATION_MS
+          : READING_DURATION_MS
+        : reducedMotion
+          ? REDUCED_MOTION_DROPPING_DURATION_MS
+          : DROPPING_DURATION_MS;
+
+    const timerId = window.setTimeout(
+      () => {
+        setRound((current) =>
+          current.problem.id === round.problem.id && current.gameState === round.gameState
+            ? {
+                ...current,
+                gameState:
+                  current.gameState === "presenting"
+                    ? "dropping"
+                    : getInitialGameState(current.problem, { mode: settings.mode, level: settings.level })
+              }
+            : current
+        );
+      },
+      phaseDuration
+    );
+
+    return () => window.clearTimeout(timerId);
+  }, [reducedMotion, round.gameState, round.problem.id, settings.level, settings.mode]);
 
   const handleJellyPlaced = (jellyId: string) => {
     setRound((current) => {
@@ -195,15 +251,33 @@ function GameScreen({ settings, progress, onSettingsChange, onProgressChange }: 
     setMenuOpen(true);
   };
 
+  const answerReady = round.gameState === "answering" || round.gameState === "wrong" || round.gameState === "correct";
   const answerDisabled = round.gameState !== "answering";
   const characterState = getCharacterState(round.gameState, round.placedRightIds.length);
+  const presenting = round.gameState === "presenting";
+  const gameContentClassName = `game-content${presenting ? " is-presenting" : ""}`;
 
   return (
     <section className="screen game-screen">
       <ParentMenuHandle onOpen={handleMenuOpen} progressLabel="長押しでメニュー" />
 
-      <div className="game-content" aria-live="polite">
-        <Equation problem={round.problem} revealAnswer={round.gameState === "correct"} />
+      <div className="orientation-prompt" role="status" aria-live="polite">
+        <svg className="orientation-icon" aria-hidden="true" viewBox="0 0 96 96" focusable="false">
+          <rect x="34" y="18" width="28" height="54" rx="7" />
+          <path d="M71 35c7 6 10 16 6 25-3 8-10 14-18 16" />
+          <path d="M61 66l-3 10 10 2" />
+        </svg>
+        <strong>スマホを横向きにしてね</strong>
+      </div>
+
+      <div className={gameContentClassName} aria-live="polite">
+        <Equation
+          animateKey={round.problem.id}
+          problem={round.problem}
+          revealAnswer={round.gameState === "correct"}
+          settling={round.gameState === "dropping"}
+          variant={round.gameState === "presenting" ? "featured" : "compact"}
+        />
         <JellyBoard
           problem={round.problem}
           level={settings.level}
@@ -212,14 +286,18 @@ function GameScreen({ settings, progress, onSettingsChange, onProgressChange }: 
           feedbackOptions={feedbackOptions}
           onJellyPlaced={handleJellyPlaced}
         />
-        <AnswerChoices
-          choices={round.choices}
-          selectedAnswer={round.selectedAnswer}
-          correctAnswer={round.problem.answer}
-          disabled={answerDisabled}
-          gameState={round.gameState}
-          onSelect={handleSelectAnswer}
-        />
+        <div className={`answer-slot ${answerReady ? "is-ready" : ""}`} aria-hidden={answerReady ? undefined : true}>
+          {answerReady && (
+            <AnswerChoices
+              choices={round.choices}
+              selectedAnswer={round.selectedAnswer}
+              correctAnswer={round.problem.answer}
+              disabled={answerDisabled}
+              gameState={round.gameState}
+              onSelect={handleSelectAnswer}
+            />
+          )}
+        </div>
       </div>
 
       <div className="game-character">

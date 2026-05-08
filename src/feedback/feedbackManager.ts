@@ -27,6 +27,7 @@ const HAPTIC_BY_EVENT: Partial<Record<FeedbackEventId, HapticPatternId>> = {
   jellyDragStart: "softTick",
   jellyDropMiss: "softTick",
   jellyDropSuccess: "softImpact",
+  jellyPackTighten: "softTick",
   jellyMergeComplete: "softImpact",
   answerPress: "tap",
   answerWrong: "wrong",

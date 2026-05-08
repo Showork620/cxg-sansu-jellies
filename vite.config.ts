@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
         theme_color: "#fff8e8",
         background_color: "#fff8e8",
         display: "standalone",
-        orientation: "portrait",
+        orientation: "landscape",
         scope: process.env.VITE_BASE_PATH ?? (mode === "production" ? repoBasePath : "/"),
         start_url: ".",
         icons: [

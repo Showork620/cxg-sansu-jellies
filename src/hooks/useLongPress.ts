@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { LONG_PRESS_MOVE_TOLERANCE, LONG_PRESS_MS } from "../game/constants";
 
 export type LongPressHandlers = {
@@ -9,13 +9,19 @@ export type LongPressHandlers = {
   onPointerLeave: () => void;
 };
 
-export function useLongPress(onLongPress: () => void): { progress: number; handlers: LongPressHandlers } {
-  const [progress, setProgress] = useState(0);
+export function useLongPress(
+  onLongPress: () => void,
+  onProgressChange?: (progress: number) => void
+): { handlers: LongPressHandlers } {
   const timerRef = useRef<number | null>(null);
   const frameRef = useRef<number | null>(null);
   const startAtRef = useRef(0);
   const startPointRef = useRef({ x: 0, y: 0 });
   const triggeredRef = useRef(false);
+
+  function setProgress(progress: number): void {
+    onProgressChange?.(progress);
+  }
 
   function clear(): void {
     if (timerRef.current !== null) {
@@ -78,5 +84,5 @@ export function useLongPress(onLongPress: () => void): { progress: number; handl
     onPointerLeave: cancel
   };
 
-  return { progress, handlers };
+  return { handlers };
 }

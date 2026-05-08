@@ -1,4 +1,5 @@
 import type { Jelly, Problem } from "./types";
+import { JELLY_COLUMNS } from "./constants";
 
 export type JellySlot = {
   id: string;
@@ -11,8 +12,8 @@ export function getJellySlot(index: number): JellySlot {
   return {
     id: `slot-${index}`,
     index,
-    row: Math.floor(index / 5),
-    col: index % 5
+    row: Math.floor(index / JELLY_COLUMNS),
+    col: index % JELLY_COLUMNS
   };
 }
 

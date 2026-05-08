@@ -2,7 +2,7 @@ export type GameMode = "addition" | "subtraction";
 
 export type Level = 1 | 2 | 3;
 
-export type GameState = "presenting" | "manipulating" | "answering" | "correct" | "wrong";
+export type GameState = "presenting" | "dropping" | "manipulating" | "answering" | "correct" | "wrong";
 
 export type Problem = {
   id: string;

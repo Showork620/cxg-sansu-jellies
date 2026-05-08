@@ -27,11 +27,11 @@
   --z-menu-handle: 20;
   --z-character: 10;
   --z-modal: 50;
-  --jelly-size: 44px;
+  --jelly-size: 76px;
 }
 
 @media (max-width: 350px) {
   :root {
-    --jelly-size: 38px;
+    --jelly-size: 64px;
   }
 }

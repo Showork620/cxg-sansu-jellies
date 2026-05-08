@@ -11,6 +11,33 @@ function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function getAdditionTotalWeight(total: number, maxTotal: number): number {
+  return maxTotal + 1 - total;
+}
+
+function pickWeightedAdditionTotal(maxTotal: number): number {
+  const weightedTotals = Array.from({ length: maxTotal - 1 }, (_, index) => {
+    const total = index + 2;
+
+    return {
+      total,
+      weight: getAdditionTotalWeight(total, maxTotal)
+    };
+  });
+  const totalWeight = weightedTotals.reduce((sum, item) => sum + item.weight, 0);
+  let roll = Math.random() * totalWeight;
+
+  for (const item of weightedTotals) {
+    roll -= item.weight;
+
+    if (roll < 0) {
+      return item.total;
+    }
+  }
+
+  return maxTotal;
+}
+
 function toProblem(parts: ProblemParts): Problem {
   return {
     ...parts,
@@ -45,16 +72,17 @@ function isRecentDuplicate(candidate: Problem, lastProblemIds: string[]): boolea
 
 export function generateAdditionProblem(level: Level, lastProblemIds: string[] = []): Problem {
   const maxAnswer = LEVEL_CONFIG[level].maxAdditionAnswer;
-  let fallback = toProblem({ mode: "addition", left: 0, right: 0, answer: 0 });
+  let fallback = toProblem({ mode: "addition", left: 1, right: 1, answer: 2 });
 
   for (let attempt = 0; attempt < 40; attempt += 1) {
-    const left = randomInt(0, maxAnswer);
-    const right = randomInt(0, maxAnswer - left);
+    const answer = pickWeightedAdditionTotal(maxAnswer);
+    const left = randomInt(1, answer - 1);
+    const right = answer - left;
     const candidate = toProblem({
       mode: "addition",
       left,
       right,
-      answer: left + right
+      answer
     });
 
     fallback = candidate;

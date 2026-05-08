@@ -1,6 +1,7 @@
 import type { AppSettings, Level, ProgressState } from "./types";
 
-export const MAX_NUMBER = 10;
+export const MAX_NUMBER = 8;
+export const JELLY_COLUMNS = 4;
 export const CHOICE_COUNT = 4;
 export const RECENT_PROBLEM_LIMIT = 3;
 export const LONG_PRESS_MS = 1000;
@@ -18,12 +19,12 @@ export const LEVEL_CONFIG: Record<Level, { maxAdditionAnswer: number; draggable:
     showMergedCount: true
   },
   2: {
-    maxAdditionAnswer: 10,
+    maxAdditionAnswer: 8,
     draggable: true,
     showMergedCount: false
   },
   3: {
-    maxAdditionAnswer: 10,
+    maxAdditionAnswer: 8,
     draggable: false,
     showMergedCount: false
   }
