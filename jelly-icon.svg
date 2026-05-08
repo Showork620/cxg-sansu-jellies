@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ぷるぷるゼリーさんすう">
+  <rect width="512" height="512" rx="112" fill="#fff1c7"/>
+  <path d="M285 64c-44 31-88 31-128 58 25 16 39 35 35 60-8 49-74 72-76 151-2 88 61 147 145 147s147-59 147-147c0-92-88-126-98-190-4-27 6-54-25-79z" fill="#f44545"/>
+  <path d="M177 132c41-24 78-28 108-52 20 22 11 43 17 65 13 51 88 84 88 188 0 76-54 129-129 129s-129-53-129-129c0-74 64-99 73-150 4-23-8-38-28-51z" fill="#ff5757"/>
+  <ellipse cx="220" cy="280" rx="16" ry="24" fill="#30303d"/>
+  <ellipse cx="304" cy="280" rx="16" ry="24" fill="#30303d"/>
+  <path d="M216 341c28 30 70 30 98 0" fill="none" stroke="#30303d" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="196" cy="234" r="15" fill="#fff" opacity=".35"/>
+</svg>

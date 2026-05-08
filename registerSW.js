@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/cxg-sansu-jellies/sw.js', { scope: '/cxg-sansu-jellies/' })})}
