@@ -1385,10 +1385,6 @@ input:focus-visible {
   transform: translateY(-4px);
 }
 
-.game-screen.has-answer-sheet .game-character.is-large {
-  z-index: 0;
-}
-
 .jelly-character {
   width: 100%;
   max-width: 110px;
