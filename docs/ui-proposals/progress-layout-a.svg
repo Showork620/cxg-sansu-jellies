@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">構成案A 横幅いっぱいのゼリー川メーター</title>
+  <desc id="desc">スマホ横向き画面で、上部に横幅いっぱいの大きな進捗メーター、中央に皿、下部に回答ボタン、右側にキャラクターを配置した案。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#fffdf7"/>
+      <stop offset="0.52" stop-color="#fff8e8"/>
+      <stop offset="1" stop-color="#eefdff"/>
+    </linearGradient>
+    <linearGradient id="meterFill" x1="0" x2="1">
+      <stop offset="0" stop-color="#ff8fac"/>
+      <stop offset="0.48" stop-color="#ffcf45"/>
+      <stop offset="1" stop-color="#7edb78"/>
+    </linearGradient>
+    <linearGradient id="plate" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#fff1cf"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#433326" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#bg)"/>
+
+  <g transform="translate(24 24)">
+    <rect width="118" height="48" rx="24" fill="#fffdf7" stroke="#ead8bc" stroke-width="2" filter="url(#softShadow)"/>
+    <circle cx="35" cy="24" r="5" fill="#5b4f45"/>
+    <circle cx="55" cy="24" r="5" fill="#5b4f45"/>
+    <circle cx="75" cy="24" r="5" fill="#5b4f45"/>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <rect x="158" y="24" width="1090" height="142" rx="36" fill="#fffdf7" stroke="#ead8bc" stroke-width="3"/>
+    <text x="190" y="62" fill="#6a4f32" font-family="system-ui, sans-serif" font-size="24" font-weight="800">あつめたゼリー</text>
+    <text x="1100" y="64" text-anchor="end" fill="#6a4f32" font-family="system-ui, sans-serif" font-size="30" font-weight="900">62</text>
+    <text x="1110" y="64" fill="#8a7663" font-family="system-ui, sans-serif" font-size="20" font-weight="800">/100</text>
+    <rect x="190" y="82" width="1014" height="54" rx="27" fill="#e8f7fb" stroke="#b7e4ef" stroke-width="3"/>
+    <rect x="190" y="82" width="628" height="54" rx="27" fill="url(#meterFill)"/>
+    <path d="M210 96 C260 84 316 122 375 100 C432 80 486 123 548 102 C610 82 674 122 742 98 C770 88 792 88 818 98 L818 136 L190 136 L190 104 C196 101 202 98 210 96Z" fill="#ffffff" opacity="0.24"/>
+    <circle cx="818" cy="109" r="38" fill="#fff8c8" stroke="#e7b83c" stroke-width="4"/>
+    <text x="818" y="118" text-anchor="middle" fill="#6b4210" font-family="system-ui, sans-serif" font-size="28" font-weight="900">62</text>
+    <g stroke="#fffdf7" stroke-width="3" opacity="0.95">
+      <line x1="292" y1="86" x2="292" y2="132"/>
+      <line x1="393" y1="86" x2="393" y2="132"/>
+      <line x1="494" y1="86" x2="494" y2="132"/>
+      <line x1="596" y1="86" x2="596" y2="132"/>
+      <line x1="697" y1="86" x2="697" y2="132"/>
+      <line x1="798" y1="86" x2="798" y2="132"/>
+      <line x1="900" y1="86" x2="900" y2="132"/>
+      <line x1="1001" y1="86" x2="1001" y2="132"/>
+      <line x1="1102" y1="86" x2="1102" y2="132"/>
+    </g>
+    <g fill="#7b6a58" font-family="system-ui, sans-serif" font-size="15" font-weight="800">
+      <text x="443" y="155" text-anchor="middle">25</text>
+      <text x="697" y="155" text-anchor="middle">50</text>
+      <text x="951" y="155" text-anchor="middle">75</text>
+      <text x="1204" y="155" text-anchor="end">100</text>
+    </g>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <rect x="452" y="184" width="376" height="80" rx="20" fill="#fffdf7" stroke="#ead8bc" stroke-width="3"/>
+    <text x="640" y="240" text-anchor="middle" fill="#302b27" font-family="system-ui, sans-serif" font-size="54" font-weight="900">3 + 2 = ?</text>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <rect x="54" y="292" width="525" height="250" rx="44" fill="url(#plate)" stroke="#e3c894" stroke-width="4"/>
+    <text x="92" y="322" fill="#906f42" font-family="system-ui, sans-serif" font-size="18" font-weight="900">ひだりのさら</text>
+    <g transform="translate(104 344)">
+      <rect x="0" y="0" width="70" height="70" rx="18" fill="#54bdff"/>
+      <rect x="88" y="0" width="70" height="70" rx="18" fill="#54bdff"/>
+      <rect x="176" y="0" width="70" height="70" rx="18" fill="#54bdff"/>
+      <rect x="264" y="0" width="70" height="70" rx="18" fill="#ff6380"/>
+      <rect x="352" y="0" width="70" height="70" rx="18" fill="#ff6380"/>
+      <rect x="44" y="88" width="70" height="70" rx="18" fill="#54bdff" opacity="0.35"/>
+      <rect x="132" y="88" width="70" height="70" rx="18" fill="#54bdff" opacity="0.35"/>
+      <rect x="220" y="88" width="70" height="70" rx="18" fill="#54bdff" opacity="0.35"/>
+      <rect x="308" y="88" width="70" height="70" rx="18" fill="#54bdff" opacity="0.35"/>
+    </g>
+  </g>
+
+  <g transform="translate(610 380)">
+    <path d="M22 0 H116" stroke="#cf3452" stroke-width="14" stroke-linecap="round"/>
+    <path d="M52 -30 L22 0 L52 30" fill="none" stroke="#cf3452" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <rect x="740" y="322" width="230" height="190" rx="40" fill="url(#plate)" stroke="#e3c894" stroke-width="4"/>
+    <text x="855" y="354" text-anchor="middle" fill="#906f42" font-family="system-ui, sans-serif" font-size="18" font-weight="900">みぎのさら</text>
+    <g transform="translate(774 374)">
+      <rect x="0" y="0" width="58" height="58" rx="15" fill="#ff6380"/>
+      <rect x="70" y="0" width="58" height="58" rx="15" fill="#ff6380"/>
+      <rect x="140" y="0" width="58" height="58" rx="15" fill="#ff6380"/>
+      <rect x="35" y="72" width="58" height="58" rx="15" fill="#ff6380" opacity="0.35"/>
+      <rect x="105" y="72" width="58" height="58" rx="15" fill="#ff6380" opacity="0.35"/>
+    </g>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <path d="M1035 296 C1108 244 1190 288 1195 376 C1201 477 1114 536 1029 503 C955 474 949 356 1035 296Z" fill="#dcf8d4" stroke="#8ccf7f" stroke-width="4"/>
+    <circle cx="1080" cy="370" r="64" fill="#7edb78"/>
+    <circle cx="1058" cy="354" r="8" fill="#2e5530"/>
+    <circle cx="1102" cy="354" r="8" fill="#2e5530"/>
+    <path d="M1058 392 C1072 407 1095 407 1110 392" fill="none" stroke="#2e5530" stroke-width="8" stroke-linecap="round"/>
+    <rect x="1007" y="492" width="172" height="48" rx="24" fill="#fffdf7" stroke="#d7c4a5" stroke-width="3"/>
+    <text x="1093" y="524" text-anchor="middle" fill="#6a4f32" font-family="system-ui, sans-serif" font-size="22" font-weight="900">あと38こ</text>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <rect x="230" y="594" width="820" height="96" rx="22" fill="#fff5af" stroke="#ffffff" stroke-width="4"/>
+    <g font-family="system-ui, sans-serif" font-size="44" font-weight="900" text-anchor="middle" fill="#302b27">
+      <rect x="262" y="612" width="168" height="58" rx="14" fill="#5fc7ff"/>
+      <text x="346" y="656">4</text>
+      <rect x="452" y="612" width="168" height="58" rx="14" fill="#ff6c93"/>
+      <text x="536" y="656">5</text>
+      <rect x="642" y="612" width="168" height="58" rx="14" fill="#82d86f"/>
+      <text x="726" y="656">6</text>
+      <rect x="832" y="612" width="168" height="58" rx="14" fill="#ffcd45"/>
+      <text x="916" y="656">7</text>
+    </g>
+  </g>
+</svg>

@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { useSoundSettings, unlockSoundFromUserGesture } from "./audio/useSound";
+import CharacterSpriteGallery from "./components/CharacterSpriteGallery";
 import GameScreen from "./components/GameScreen";
 import SetupScreen from "./components/SetupScreen";
 import SplashScreen from "./components/SplashScreen";
@@ -8,10 +9,15 @@ import type { AppSettings, ProgressState } from "./game/types";
 
 type Screen = "splash" | "setup" | "game";
 
+function isCharacterGalleryRequested() {
+  return new URLSearchParams(window.location.search).get("gallery") === "characters";
+}
+
 function App() {
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
   const [progress, setProgress] = useState<ProgressState>(() => loadProgress());
   const [screen, setScreen] = useState<Screen>("splash");
+  const [showCharacterGallery, setShowCharacterGallery] = useState(isCharacterGalleryRequested);
 
   useSoundSettings(settings);
 
@@ -41,6 +47,21 @@ function App() {
     updateSettings({ ...nextSettings, setupCompleted: true });
     setScreen("game");
   };
+
+  const handleCloseCharacterGallery = useCallback(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("gallery");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    setShowCharacterGallery(false);
+  }, []);
+
+  if (showCharacterGallery) {
+    return (
+      <main className="app-root is-gallery">
+        <CharacterSpriteGallery onClose={handleCloseCharacterGallery} />
+      </main>
+    );
+  }
 
   return (
     <main className="app-root" onPointerDownCapture={unlockSoundFromUserGesture}>

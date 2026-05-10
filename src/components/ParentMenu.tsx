@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DEFAULT_PROGRESS } from "../game/constants";
+import { createDefaultProgress } from "../game/constants";
 import type { AppSettings, Level, ProgressState } from "../game/types";
 
 type ParentMenuProps = {
@@ -23,12 +23,19 @@ function ParentMenu({ settings, progress, onSettingsChange, onProgressChange, on
         <div className="menu-section">
           <p>もーど</p>
           <div className="segmented-grid compact">
-            <button className="segment is-selected blue" type="button">
+            <button
+              className={`segment blue ${settings.mode === "addition" ? "is-selected" : ""}`}
+              type="button"
+              onClick={() => onSettingsChange((current) => ({ ...current, mode: "addition" }))}
+            >
               たしざん
             </button>
-            <button className="segment green" type="button" disabled>
+            <button
+              className={`segment green ${settings.mode === "subtraction" ? "is-selected" : ""}`}
+              type="button"
+              onClick={() => onSettingsChange((current) => ({ ...current, mode: "subtraction" }))}
+            >
               ひきざん
-              <span>じゅんびちゅう</span>
             </button>
           </div>
         </div>
@@ -68,6 +75,15 @@ function ParentMenu({ settings, progress, onSettingsChange, onProgressChange, on
             <span>ブルブル</span>
             <strong>{settings.hapticsEnabled ? "ON" : "OFF"}</strong>
           </label>
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={settings.assistEnabled}
+              onChange={(event) => onSettingsChange((current) => ({ ...current, assistEnabled: event.target.checked }))}
+            />
+            <span>アシスト</span>
+            <strong>{settings.assistEnabled ? "ON" : "OFF"}</strong>
+          </label>
           <small>きかないたんまつもあります</small>
         </div>
 
@@ -83,7 +99,7 @@ function ParentMenu({ settings, progress, onSettingsChange, onProgressChange, on
               className="plain-danger"
               type="button"
               onClick={() => {
-                onProgressChange(DEFAULT_PROGRESS);
+                onProgressChange(createDefaultProgress());
                 setConfirmReset(false);
               }}
             >

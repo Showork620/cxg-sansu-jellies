@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">構成案B 10こカップが並ぶゼリー工場メーター</title>
+  <desc id="desc">スマホ横向き画面で、上部に10個の大きなカップを横並びにし、10個単位でゼリーが満ちる進捗を見せる案。</desc>
+  <defs>
+    <linearGradient id="bgB" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#f5fdff"/>
+      <stop offset="0.5" stop-color="#fff9e7"/>
+      <stop offset="1" stop-color="#fff0f5"/>
+    </linearGradient>
+    <linearGradient id="cupFill" x1="0" x2="0" y1="1" y2="0">
+      <stop offset="0" stop-color="#f34f6d"/>
+      <stop offset="0.52" stop-color="#ff8fac"/>
+      <stop offset="1" stop-color="#ffd2d9"/>
+    </linearGradient>
+    <linearGradient id="cupGlass" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.88"/>
+      <stop offset="1" stop-color="#dff8ff" stop-opacity="0.72"/>
+    </linearGradient>
+    <linearGradient id="plateB" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#fff0cd"/>
+    </linearGradient>
+    <filter id="shadowB" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#433326" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#bgB)"/>
+
+  <g transform="translate(24 24)">
+    <rect width="112" height="46" rx="23" fill="#fffdf7" stroke="#e7d3b3" stroke-width="2" filter="url(#shadowB)"/>
+    <circle cx="34" cy="23" r="5" fill="#5b4f45"/>
+    <circle cx="54" cy="23" r="5" fill="#5b4f45"/>
+    <circle cx="74" cy="23" r="5" fill="#5b4f45"/>
+  </g>
+
+  <g filter="url(#shadowB)">
+    <rect x="150" y="20" width="1102" height="178" rx="34" fill="#fffdf7" stroke="#ead8bc" stroke-width="3"/>
+    <text x="188" y="58" fill="#6a4f32" font-family="system-ui, sans-serif" font-size="24" font-weight="900">ゼリーカップ</text>
+    <rect x="1028" y="34" width="178" height="44" rx="22" fill="#fff4bb" stroke="#e4bb43" stroke-width="3"/>
+    <text x="1117" y="65" text-anchor="middle" fill="#6b4210" font-family="system-ui, sans-serif" font-size="25" font-weight="900">62/100</text>
+
+    <g transform="translate(184 86)">
+      <g>
+        <rect x="0" y="0" width="82" height="82" rx="18" fill="url(#cupGlass)" stroke="#b5e7f1" stroke-width="3"/>
+        <rect x="8" y="14" width="66" height="60" rx="14" fill="url(#cupFill)"/>
+        <text x="41" y="105" text-anchor="middle" fill="#7b6a58" font-family="system-ui, sans-serif" font-size="14" font-weight="800">10</text>
+      </g>
+      <g transform="translate(96 0)">
+        <rect x="0" y="0" width="82" height="82" rx="18" fill="url(#cupGlass)" stroke="#b5e7f1" stroke-width="3"/>
+        <rect x="8" y="14" width="66" height="60" rx="14" fill="url(#cupFill)"/>
+        <text x="41" y="105" text-anchor="middle" fill="#7b6a58" font-family="system-ui, sans-serif" font-size="14" font-weight="800">20</text>
+      </g>
+      <g transform="translate(192 0)">
+        <rect x="0" y="0" width="82" height="82" rx="18" fill="url(#cupGlass)" stroke="#b5e7f1" stroke-width="3"/>
+        <rect x="8" y="14" width="66" height="60" rx="14" fill="url(#cupFill)"/>
+        <text x="41" y="105" text-anchor="middle" fill="#7b6a58" font-family="system-ui, sans-serif" font-size="14" font-weight="800">30</text>
+      </g>
+      <g transform="translate(288 0)">
+        <rect x="0" y="0" width="82" height="82" rx="18" fill="url(#cupGlass)" stroke="#b5e7f1" stroke-width="3"/>
+        <rect x="8" y="14" width="66" height="60" rx="14" fill="url(#cupFill)"/>
+        <text x="41" y="105" text-anchor="middle" fill="#7b6a58" font-family="system-ui, sans-serif" font-size="14" font-weight="800">40</text>
+      </g>
+      <g transform="translate(384 0)">
+        <rect x="0" y="0" width="82" height="82" rx="18" fill="url(#cupGlass)" stroke="#b5e7f1" stroke-width="3"/>
+        <rect x="8" y="14" width="66" height="60" rx="14" fill="url(#cupFill)"/>
+        <text x="41" y="105" text-anchor="middle" fill="#7b6a58" font-family="system-ui, sans-serif" font-size="14" font-weight="800">50</text>
+      </g>
+      <g transform="translate(480 0)">
+        <rect x="0" y="0" width="82" height="82" rx="18" fill="url(#cupGlass)" stroke="#b5e7f1" stroke-width="3"/>
+        <rect x="8" y="14" width="66" height="60" rx="14" fill="url(#cupFill)"/>
+        <text x="41" y="105" text-anchor="middle" fill="#7b6a58" font-family="system-ui, sans-serif" font-size="14" font-weight="800">60</text>
+      </g>
+      <g transform="translate(576 0)">
+        <rect x="-6" y="-7" width="94" height="96" rx="22" fill="#fff8c8" stroke="#e3ad28" stroke-width="4"/>
+        <rect x="0" y="0" width="82" height="82" rx="18" fill="url(#cupGlass)" stroke="#b5e7f1" stroke-width="3"/>
+        <rect x="8" y="58" width="66" height="16" rx="8" fill="url(#cupFill)"/>
+        <text x="41" y="51" text-anchor="middle" fill="#6b4210" font-family="system-ui, sans-serif" font-size="22" font-weight="900">2</text>
+        <text x="41" y="105" text-anchor="middle" fill="#7b6a58" font-family="system-ui, sans-serif" font-size="14" font-weight="800">70</text>
+      </g>
+      <g transform="translate(672 0)" opacity="0.58">
+        <rect x="0" y="0" width="82" height="82" rx="18" fill="url(#cupGlass)" stroke="#b5e7f1" stroke-width="3"/>
+        <text x="41" y="105" text-anchor="middle" fill="#7b6a58" font-family="system-ui, sans-serif" font-size="14" font-weight="800">80</text>
+      </g>
+      <g transform="translate(768 0)" opacity="0.58">
+        <rect x="0" y="0" width="82" height="82" rx="18" fill="url(#cupGlass)" stroke="#b5e7f1" stroke-width="3"/>
+        <text x="41" y="105" text-anchor="middle" fill="#7b6a58" font-family="system-ui, sans-serif" font-size="14" font-weight="800">90</text>
+      </g>
+      <g transform="translate(864 0)" opacity="0.58">
+        <rect x="0" y="0" width="82" height="82" rx="18" fill="url(#cupGlass)" stroke="#b5e7f1" stroke-width="3"/>
+        <text x="41" y="105" text-anchor="middle" fill="#7b6a58" font-family="system-ui, sans-serif" font-size="14" font-weight="800">100</text>
+      </g>
+    </g>
+  </g>
+
+  <g filter="url(#shadowB)">
+    <rect x="70" y="228" width="306" height="86" rx="22" fill="#fffdf7" stroke="#ead8bc" stroke-width="3"/>
+    <text x="223" y="286" text-anchor="middle" fill="#302b27" font-family="system-ui, sans-serif" font-size="52" font-weight="900">7 - 3 = ?</text>
+  </g>
+
+  <g filter="url(#shadowB)">
+    <rect x="74" y="350" width="478" height="190" rx="42" fill="url(#plateB)" stroke="#e3c894" stroke-width="4"/>
+    <text x="110" y="380" fill="#906f42" font-family="system-ui, sans-serif" font-size="18" font-weight="900">ひだりのさら</text>
+    <g transform="translate(122 404)">
+      <rect x="0" y="0" width="58" height="58" rx="15" fill="#80d982"/>
+      <rect x="72" y="0" width="58" height="58" rx="15" fill="#80d982"/>
+      <rect x="144" y="0" width="58" height="58" rx="15" fill="#80d982"/>
+      <rect x="216" y="0" width="58" height="58" rx="15" fill="#80d982"/>
+      <rect x="288" y="0" width="58" height="58" rx="15" fill="#ff6380"/>
+      <rect x="72" y="72" width="58" height="58" rx="15" fill="#ff6380"/>
+      <rect x="144" y="72" width="58" height="58" rx="15" fill="#ff6380"/>
+      <rect x="216" y="72" width="58" height="58" rx="15" fill="#80d982" opacity="0.35"/>
+    </g>
+  </g>
+
+  <g transform="translate(586 430)">
+    <path d="M0 0 H88" stroke="#408f44" stroke-width="13" stroke-linecap="round"/>
+    <path d="M58 -28 L88 0 L58 28" fill="none" stroke="#408f44" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g filter="url(#shadowB)">
+    <rect x="704" y="352" width="208" height="168" rx="38" fill="url(#plateB)" stroke="#e3c894" stroke-width="4"/>
+    <text x="808" y="382" text-anchor="middle" fill="#906f42" font-family="system-ui, sans-serif" font-size="18" font-weight="900">みぎのさら</text>
+    <g transform="translate(738 405)">
+      <rect x="0" y="0" width="52" height="52" rx="14" fill="#ff6380"/>
+      <rect x="62" y="0" width="52" height="52" rx="14" fill="#ff6380"/>
+      <rect x="124" y="0" width="52" height="52" rx="14" fill="#ff6380"/>
+      <rect x="31" y="62" width="52" height="52" rx="14" fill="#ff6380" opacity="0.35"/>
+      <rect x="93" y="62" width="52" height="52" rx="14" fill="#ff6380" opacity="0.35"/>
+    </g>
+  </g>
+
+  <g filter="url(#shadowB)">
+    <path d="M1026 274 C1094 225 1196 270 1194 378 C1192 479 1118 538 1034 507 C953 477 948 334 1026 274Z" fill="#e4fbdc" stroke="#9ad28d" stroke-width="4"/>
+    <circle cx="1082" cy="370" r="63" fill="#80d982"/>
+    <circle cx="1060" cy="354" r="8" fill="#2e5530"/>
+    <circle cx="1104" cy="354" r="8" fill="#2e5530"/>
+    <path d="M1058 392 C1075 404 1091 404 1109 392" fill="none" stroke="#2e5530" stroke-width="8" stroke-linecap="round"/>
+    <rect x="1008" y="492" width="176" height="50" rx="25" fill="#fffdf7" stroke="#d7c4a5" stroke-width="3"/>
+    <text x="1096" y="525" text-anchor="middle" fill="#6a4f32" font-family="system-ui, sans-serif" font-size="22" font-weight="900">もうすこし</text>
+  </g>
+
+  <g filter="url(#shadowB)">
+    <rect x="230" y="596" width="820" height="94" rx="22" fill="#dff7ff" stroke="#ffffff" stroke-width="4"/>
+    <g font-family="system-ui, sans-serif" font-size="44" font-weight="900" text-anchor="middle" fill="#302b27">
+      <rect x="262" y="614" width="168" height="58" rx="14" fill="#5fc7ff"/>
+      <text x="346" y="658">3</text>
+      <rect x="452" y="614" width="168" height="58" rx="14" fill="#ff6c93"/>
+      <text x="536" y="658">4</text>
+      <rect x="642" y="614" width="168" height="58" rx="14" fill="#82d86f"/>
+      <text x="726" y="658">5</text>
+      <rect x="832" y="614" width="168" height="58" rx="14" fill="#ffcd45"/>
+      <text x="916" y="658">6</text>
+    </g>
+  </g>
+</svg>

@@ -5,22 +5,28 @@ type EquationProps = {
   problem: Problem;
   revealAnswer: boolean;
   settling?: boolean;
+  successReading?: boolean;
   variant: "featured" | "compact";
 };
 
-function Equation({ animateKey, problem, revealAnswer, settling = false, variant }: EquationProps) {
+function Equation({ animateKey, problem, revealAnswer, settling = false, successReading = false, variant }: EquationProps) {
   const operator = problem.mode === "addition" ? "+" : "-";
   const tokens = [
     { className: "left", label: problem.left, readIndex: 0 },
     { className: "operator", label: operator, readIndex: 1 },
     { className: "right", label: problem.right, readIndex: 2 },
-    { className: "operator", label: "=", readIndex: null },
-    { className: "answer", label: revealAnswer ? problem.answer : "?", readIndex: 3 }
+    { className: "operator", label: "=", readIndex: successReading ? 3 : null },
+    { className: "answer", label: revealAnswer ? problem.answer : "?", readIndex: successReading ? 4 : 3 }
   ];
 
   return (
     <div className={`question-panel-slot is-${variant} ${settling ? "is-settling" : ""}`} key={animateKey}>
-      <section className={`question-panel is-${variant} ${revealAnswer ? "is-complete" : ""}`} aria-label="もんだい">
+      <section
+        className={`question-panel is-${variant} ${revealAnswer ? "is-complete" : ""} ${
+          successReading ? "is-success-reading" : ""
+        }`}
+        aria-label="もんだい"
+      >
         <div className="equation">
           {tokens.map((token, index) => (
             <span

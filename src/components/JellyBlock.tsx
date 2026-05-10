@@ -2,7 +2,9 @@ import type { Jelly } from "../game/types";
 
 const COLOR_LABELS: Record<Jelly["color"], string> = {
   blue: "あお",
+  yellow: "きいろ",
   green: "みどり",
+  purple: "むらさき",
   red: "あか"
 };
 
@@ -11,6 +13,7 @@ type JellyBlockProps = {
   compact?: boolean;
   draggable?: boolean;
   ghost?: boolean;
+  landed?: boolean;
   onPress?: (event: React.PointerEvent<HTMLElement>) => void;
   style?: React.CSSProperties;
   dragHandlers?: {
@@ -26,6 +29,7 @@ function JellyBlock({
   compact = false,
   draggable = false,
   ghost = false,
+  landed = false,
   onPress,
   style,
   dragHandlers
@@ -46,7 +50,7 @@ function JellyBlock({
       aria-label={`${COLOR_LABELS[jelly.color]}ゼリー`}
       className={`jelly-block ${jelly.color} ${compact ? "is-compact" : ""} ${draggable ? "is-draggable" : ""} ${
         ghost ? "is-ghost" : ""
-      }`}
+      } ${landed ? "is-landed" : ""}`}
       data-jelly-id={jelly.id}
       role={draggable ? "button" : "img"}
       style={style}

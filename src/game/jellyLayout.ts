@@ -22,10 +22,11 @@ export function getJellySlots(count: number): JellySlot[] {
 }
 
 export function createProblemJellies(problem: Problem, placedRightIds: string[] = []): Jelly[] {
-  const leftJellies: Jelly[] = Array.from({ length: problem.left }, (_, index) => ({
+  const stableLeftCount = problem.mode === "subtraction" ? problem.answer : problem.left;
+  const leftJellies: Jelly[] = Array.from({ length: stableLeftCount }, (_, index) => ({
     id: `left-${problem.id}-${index}`,
     valueGroup: "left",
-    color: problem.mode === "subtraction" ? "green" : "blue",
+    color: problem.leftColor,
     index,
     placed: true
   }));
@@ -36,7 +37,7 @@ export function createProblemJellies(problem: Problem, placedRightIds: string[] 
     return {
       id,
       valueGroup: "right",
-      color: problem.mode === "subtraction" ? "green" : "red",
+      color: problem.rightColor,
       index,
       placed: placedRightIds.includes(id)
     };

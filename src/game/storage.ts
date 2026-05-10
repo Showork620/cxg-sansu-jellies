@@ -1,5 +1,15 @@
-import { DEFAULT_PROGRESS, DEFAULT_SETTINGS, RECENT_PROBLEM_LIMIT, STORAGE_KEYS } from "./constants";
-import type { AppSettings, GameMode, Level, ProgressState } from "./types";
+import {
+  COLLECTION_JELLY_TOTAL,
+  COLLECTION_PROBLEM_COUNT,
+  DEFAULT_SETTINGS,
+  MAX_ANSWER,
+  MIN_ANSWER,
+  RECENT_PROBLEM_LIMIT,
+  STORAGE_KEYS,
+  createCollectionSession,
+  createDefaultProgress
+} from "./constants";
+import type { AppSettings, CollectionSession, GameMode, Level, ProgressState } from "./types";
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -11,6 +21,27 @@ function isMode(value: unknown): value is GameMode {
 
 function isLevel(value: unknown): value is Level {
   return value === 1 || value === 2 || value === 3;
+}
+
+function isWholeNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value);
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function sum(values: number[]): number {
+  return values.reduce((total, value) => total + value, 0);
+}
+
+function isValidAnswerPlan(value: unknown): value is number[] {
+  return (
+    Array.isArray(value) &&
+    value.length === COLLECTION_PROBLEM_COUNT &&
+    value.every((answer) => isWholeNumber(answer) && answer >= MIN_ANSWER && answer <= MAX_ANSWER) &&
+    sum(value) === COLLECTION_JELLY_TOTAL
+  );
 }
 
 function readJson(key: string): unknown {
@@ -44,13 +75,39 @@ export function sanitizeSettings(value: unknown): AppSettings {
         ? value.soundVolume
         : DEFAULT_SETTINGS.soundVolume,
     hapticsEnabled: typeof value.hapticsEnabled === "boolean" ? value.hapticsEnabled : DEFAULT_SETTINGS.hapticsEnabled,
+    assistEnabled: typeof value.assistEnabled === "boolean" ? value.assistEnabled : DEFAULT_SETTINGS.assistEnabled,
     setupCompleted: typeof value.setupCompleted === "boolean" ? value.setupCompleted : DEFAULT_SETTINGS.setupCompleted
   };
 }
 
+export function sanitizeCollectionSession(value: unknown): CollectionSession {
+  if (!isObject(value) || value.schemaVersion !== 1 || !isValidAnswerPlan(value.answerPlan)) {
+    return createCollectionSession();
+  }
+
+  const rawIndex = isWholeNumber(value.currentIndex) ? value.currentIndex : 0;
+  const currentIndex = clamp(rawIndex, 0, COLLECTION_PROBLEM_COUNT);
+  const answerPlan = [...value.answerPlan];
+  const collectedStack = answerPlan.slice(0, currentIndex);
+  const collectedTotal = sum(collectedStack);
+  const completed = currentIndex === COLLECTION_PROBLEM_COUNT && collectedTotal === COLLECTION_JELLY_TOTAL;
+
+  return {
+    schemaVersion: 1,
+    id: typeof value.id === "string" && value.id.length > 0 ? value.id : createCollectionSession().id,
+    targetTotal: COLLECTION_JELLY_TOTAL,
+    totalRounds: COLLECTION_PROBLEM_COUNT,
+    answerPlan,
+    currentIndex,
+    collectedStack,
+    collectedTotal,
+    status: completed ? "completed" : "active"
+  };
+}
+
 export function sanitizeProgress(value: unknown): ProgressState {
-  if (!isObject(value) || value.schemaVersion !== 1) {
-    return DEFAULT_PROGRESS;
+  if (!isObject(value) || (value.schemaVersion !== 1 && value.schemaVersion !== 2)) {
+    return createDefaultProgress();
   }
 
   const totalAnswered = typeof value.totalAnswered === "number" && value.totalAnswered >= 0 ? value.totalAnswered : 0;
@@ -62,12 +119,13 @@ export function sanitizeProgress(value: unknown): ProgressState {
     : [];
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     totalAnswered,
     totalCorrect: Math.min(totalCorrect, totalAnswered),
     currentStreak,
     bestStreak: Math.max(bestStreak, currentStreak),
-    lastProblemIds
+    lastProblemIds,
+    collectionSession: sanitizeCollectionSession(value.collectionSession)
   };
 }
 
@@ -88,6 +146,7 @@ export function saveProgress(progress: ProgressState): void {
 }
 
 export function resetProgress(): ProgressState {
-  saveProgress(DEFAULT_PROGRESS);
-  return DEFAULT_PROGRESS;
+  const progress = createDefaultProgress();
+  saveProgress(progress);
+  return progress;
 }

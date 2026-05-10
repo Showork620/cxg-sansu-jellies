@@ -1,127 +1,108 @@
-import { LEVEL_CONFIG, MAX_NUMBER, RECENT_PROBLEM_LIMIT } from "./constants";
-import type { GameMode, Level, Problem } from "./types";
+import { MAX_ANSWER, MAX_MOVABLE_JELLIES } from "./constants";
+import type { CollectionSession, GameMode, JellyColor, Problem } from "./types";
 
-type ProblemParts = Pick<Problem, "mode" | "left" | "right" | "answer">;
+type ProblemParts = Pick<
+  Problem,
+  | "mode"
+  | "left"
+  | "right"
+  | "answer"
+  | "leftColor"
+  | "rightColor"
+  | "collectionSessionId"
+  | "collectionIndex"
+  | "jellyCount"
+  | "transferDirection"
+  | "movableCount"
+>;
 
-export function getProblemId(mode: GameMode, left: number, right: number): string {
-  return `${mode}:${left}:${right}`;
+const JELLY_COLOR_PALETTE: JellyColor[] = ["red", "blue", "yellow", "green", "purple"];
+
+export function getProblemId(session: CollectionSession, parts: ProblemParts): string {
+  return [
+    session.id,
+    parts.collectionIndex,
+    parts.mode,
+    parts.left,
+    parts.right,
+    parts.answer,
+    parts.leftColor,
+    parts.rightColor
+  ].join(":");
 }
 
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function getAdditionTotalWeight(total: number, maxTotal: number): number {
-  return maxTotal + 1 - total;
-}
+function pickJellyColors(): Pick<ProblemParts, "leftColor" | "rightColor"> {
+  const leftIndex = randomInt(0, JELLY_COLOR_PALETTE.length - 1);
+  let rightIndex = randomInt(0, JELLY_COLOR_PALETTE.length - 2);
 
-function pickWeightedAdditionTotal(maxTotal: number): number {
-  const weightedTotals = Array.from({ length: maxTotal - 1 }, (_, index) => {
-    const total = index + 2;
-
-    return {
-      total,
-      weight: getAdditionTotalWeight(total, maxTotal)
-    };
-  });
-  const totalWeight = weightedTotals.reduce((sum, item) => sum + item.weight, 0);
-  let roll = Math.random() * totalWeight;
-
-  for (const item of weightedTotals) {
-    roll -= item.weight;
-
-    if (roll < 0) {
-      return item.total;
-    }
+  if (rightIndex >= leftIndex) {
+    rightIndex += 1;
   }
 
-  return maxTotal;
-}
-
-function toProblem(parts: ProblemParts): Problem {
   return {
-    ...parts,
-    id: getProblemId(parts.mode, parts.left, parts.right)
+    leftColor: JELLY_COLOR_PALETTE[leftIndex],
+    rightColor: JELLY_COLOR_PALETTE[rightIndex]
   };
 }
 
-function answerFromProblemId(problemId: string): number | null {
-  const [mode, leftText, rightText] = problemId.split(":");
-  const left = Number(leftText);
-  const right = Number(rightText);
-
-  if ((mode !== "addition" && mode !== "subtraction") || Number.isNaN(left) || Number.isNaN(right)) {
-    return null;
-  }
-
-  return mode === "addition" ? left + right : left - right;
+function toProblem(session: CollectionSession, parts: ProblemParts): Problem {
+  return {
+    ...parts,
+    id: getProblemId(session, parts)
+  };
 }
 
-function isOverusedAnswer(candidate: Problem, lastProblemIds: string[]): boolean {
-  const recentAnswers = lastProblemIds
-    .slice(-2)
-    .map(answerFromProblemId)
-    .filter((answer): answer is number => answer !== null);
+function generateAdditionProblem(session: CollectionSession, jellyCount: number, collectionIndex: number): Problem {
+  const answer = jellyCount;
+  const minRight = Math.max(1, answer - MAX_MOVABLE_JELLIES);
+  const maxRight = Math.min(MAX_MOVABLE_JELLIES, answer - 1);
+  const right = randomInt(minRight, maxRight);
+  const left = answer - right;
 
-  return recentAnswers.length >= 2 && recentAnswers.every((answer) => answer === candidate.answer);
+  return toProblem(session, {
+    mode: "addition",
+    left,
+    right,
+    answer,
+    ...pickJellyColors(),
+    collectionSessionId: session.id,
+    collectionIndex,
+    jellyCount,
+    transferDirection: "right-to-left",
+    movableCount: right
+  });
 }
 
-function isRecentDuplicate(candidate: Problem, lastProblemIds: string[]): boolean {
-  return lastProblemIds.slice(-RECENT_PROBLEM_LIMIT).includes(candidate.id);
+function generateSubtractionProblem(session: CollectionSession, answer: number, collectionIndex: number): Problem {
+  const maxRight = Math.min(MAX_MOVABLE_JELLIES, MAX_ANSWER - answer);
+  const right = maxRight > 0 ? randomInt(1, maxRight) : 0;
+  const left = answer + right;
+
+  return toProblem(session, {
+    mode: "subtraction",
+    left,
+    right,
+    answer,
+    ...pickJellyColors(),
+    collectionSessionId: session.id,
+    collectionIndex,
+    jellyCount: answer,
+    transferDirection: "left-to-right",
+    movableCount: right
+  });
 }
 
-export function generateAdditionProblem(level: Level, lastProblemIds: string[] = []): Problem {
-  const maxAnswer = LEVEL_CONFIG[level].maxAdditionAnswer;
-  let fallback = toProblem({ mode: "addition", left: 1, right: 1, answer: 2 });
+export function generateProblem(mode: GameMode, session: CollectionSession): Problem {
+  const collectionIndex = Math.min(session.currentIndex, session.answerPlan.length - 1);
+  const jellyCount = session.answerPlan[collectionIndex];
 
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    const answer = pickWeightedAdditionTotal(maxAnswer);
-    const left = randomInt(1, answer - 1);
-    const right = answer - left;
-    const candidate = toProblem({
-      mode: "addition",
-      left,
-      right,
-      answer
-    });
-
-    fallback = candidate;
-
-    if (!isRecentDuplicate(candidate, lastProblemIds) && !isOverusedAnswer(candidate, lastProblemIds)) {
-      return candidate;
-    }
-  }
-
-  return fallback;
-}
-
-export function generateSubtractionProblem(lastProblemIds: string[] = []): Problem {
-  let fallback = toProblem({ mode: "subtraction", left: 0, right: 0, answer: 0 });
-
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    const left = randomInt(0, MAX_NUMBER);
-    const right = randomInt(0, left);
-    const candidate = toProblem({
-      mode: "subtraction",
-      left,
-      right,
-      answer: left - right
-    });
-
-    fallback = candidate;
-
-    if (!isRecentDuplicate(candidate, lastProblemIds) && !isOverusedAnswer(candidate, lastProblemIds)) {
-      return candidate;
-    }
-  }
-
-  return fallback;
-}
-
-export function generateProblem(mode: GameMode, level: Level, lastProblemIds: string[] = []): Problem {
   if (mode === "subtraction") {
-    return generateSubtractionProblem(lastProblemIds);
+    return generateSubtractionProblem(session, jellyCount, collectionIndex);
   }
 
-  return generateAdditionProblem(level, lastProblemIds);
+  return generateAdditionProblem(session, jellyCount, collectionIndex);
 }

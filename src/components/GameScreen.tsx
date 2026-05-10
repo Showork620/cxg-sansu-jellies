@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { generateChoices } from "../game/choiceGenerator";
-import { LEVEL_CONFIG, RECENT_PROBLEM_LIMIT } from "../game/constants";
+import {
+  COLLECTION_JELLY_TOTAL,
+  LEVEL_CONFIG,
+  RECENT_PROBLEM_LIMIT,
+  advanceCollectionSession,
+  createCollectionSession
+} from "../game/constants";
 import { generateProblem } from "../game/problemGenerator";
-import type { AppSettings, CharacterState, GameState, Problem, ProgressState } from "../game/types";
+import type { AppSettings, CharacterState, CollectionSession, GameState, Problem, ProgressState } from "../game/types";
 import { playFeedback } from "../feedback/feedbackManager";
 import { useReducedMotion } from "../hooks/useReducedMotion";
 import AnswerChoices from "./AnswerChoices";
@@ -11,6 +17,7 @@ import Equation from "./Equation";
 import JellyBoard from "./JellyBoard";
 import ParentMenu from "./ParentMenu";
 import ParentMenuHandle from "./ParentMenuHandle";
+import ProgressMeter from "./ProgressMeter";
 import SuccessOverlay from "./SuccessOverlay";
 
 type GameScreenProps = {
@@ -25,28 +32,39 @@ type RoundState = {
   choices: number[];
   gameState: GameState;
   selectedAnswer: number | null;
-  placedRightIds: string[];
+  movedJellyIds: string[];
+};
+
+type SuccessPhase = "idle" | "reading" | "collecting" | "overlay";
+
+type CollectionRun = {
+  problemId: string;
+  from: number;
+  to: number;
+  added: number;
+  trueClear: boolean;
 };
 
 const READING_DURATION_MS = 3100;
 const DROPPING_DURATION_MS = 2200;
+const SUCCESS_READING_DURATION_MS = 3900;
+const COLLECTION_STEP_MS = 44;
+const COLLECTION_WRAP_MS = 620;
 const REDUCED_MOTION_READING_DURATION_MS = 280;
 const REDUCED_MOTION_DROPPING_DURATION_MS = 180;
+const REDUCED_MOTION_SUCCESS_READING_DURATION_MS = 220;
+const REDUCED_MOTION_COLLECTION_DURATION_MS = 180;
 
 function getInitialGameState(problem: Problem, settings: Pick<AppSettings, "mode" | "level">): GameState {
-  if (settings.mode === "subtraction") {
-    return "answering";
-  }
-
-  if (!LEVEL_CONFIG[settings.level].draggable || problem.right === 0) {
+  if (!LEVEL_CONFIG[settings.level].draggable || problem.movableCount === 0) {
     return "answering";
   }
 
   return "manipulating";
 }
 
-function createRound(settings: Pick<AppSettings, "mode" | "level">, lastProblemIds: string[]): RoundState {
-  const problem = generateProblem(settings.mode, settings.level, lastProblemIds);
+function createRound(settings: Pick<AppSettings, "mode" | "level">, collectionSession: CollectionSession): RoundState {
+  const problem = generateProblem(settings.mode, collectionSession);
   const initialGameState = getInitialGameState(problem, settings);
 
   return {
@@ -54,7 +72,7 @@ function createRound(settings: Pick<AppSettings, "mode" | "level">, lastProblemI
     choices: generateChoices(problem.answer),
     gameState: initialGameState === "manipulating" ? "presenting" : initialGameState,
     selectedAnswer: null,
-    placedRightIds: []
+    movedJellyIds: []
   };
 }
 
@@ -77,7 +95,12 @@ function getCharacterState(gameState: GameState, placedCount: number): Character
 function GameScreen({ settings, progress, onSettingsChange, onProgressChange }: GameScreenProps) {
   const reducedMotion = useReducedMotion();
   const progressRef = useRef(progress);
-  const [round, setRound] = useState<RoundState>(() => createRound(settings, progress.lastProblemIds));
+  const [round, setRound] = useState<RoundState>(() => createRound(settings, progress.collectionSession));
+  const [successPhase, setSuccessPhase] = useState<SuccessPhase>(() =>
+    progress.collectionSession.status === "completed" ? "overlay" : "idle"
+  );
+  const [collectionRun, setCollectionRun] = useState<CollectionRun | null>(null);
+  const [meterValue, setMeterValue] = useState(progress.collectionSession.collectedTotal);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const feedbackOptions = useMemo(
@@ -97,7 +120,7 @@ function GameScreen({ settings, progress, onSettingsChange, onProgressChange }: 
     const preventGameScreenScroll = (event: TouchEvent) => {
       const target = event.target;
 
-      if (target instanceof Element && target.closest(".parent-menu")) {
+      if (target instanceof Element && target.closest(".parent-menu, .success-panel")) {
         return;
       }
 
@@ -110,17 +133,34 @@ function GameScreen({ settings, progress, onSettingsChange, onProgressChange }: 
   }, []);
 
   const resetRound = useCallback(
-    (lastProblemIds: string[]) => {
-      setRound(createRound({ mode: settings.mode, level: settings.level }, lastProblemIds));
+    (collectionSession: CollectionSession) => {
+      setSuccessPhase(collectionSession.status === "completed" ? "overlay" : "idle");
+      setCollectionRun(null);
+      setMeterValue(collectionSession.collectedTotal);
+      setRound(createRound({ mode: settings.mode, level: settings.level }, collectionSession));
     },
     [settings.level, settings.mode]
   );
 
   useEffect(() => {
-    resetRound(progressRef.current.lastProblemIds);
+    resetRound(progressRef.current.collectionSession);
   }, [resetRound]);
 
   useEffect(() => {
+    if (successPhase !== "idle" || round.problem.collectionSessionId === progress.collectionSession.id) {
+      return;
+    }
+
+    const timerId = window.setTimeout(() => resetRound(progress.collectionSession), 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [progress.collectionSession, resetRound, round.problem.collectionSessionId, successPhase]);
+
+  useEffect(() => {
+    if (successPhase === "overlay") {
+      return;
+    }
+
     if (round.gameState !== "presenting" && round.gameState !== "dropping") {
       return;
     }
@@ -152,20 +192,20 @@ function GameScreen({ settings, progress, onSettingsChange, onProgressChange }: 
     );
 
     return () => window.clearTimeout(timerId);
-  }, [reducedMotion, round.gameState, round.problem.id, settings.level, settings.mode]);
+  }, [reducedMotion, round.gameState, round.problem.id, settings.level, settings.mode, successPhase]);
 
   const handleJellyPlaced = (jellyId: string) => {
     setRound((current) => {
-      if (current.placedRightIds.includes(jellyId)) {
+      if (current.movedJellyIds.includes(jellyId)) {
         return current;
       }
 
-      const placedRightIds = [...current.placedRightIds, jellyId];
-      const allPlaced = placedRightIds.length >= current.problem.right;
+      const movedJellyIds = [...current.movedJellyIds, jellyId];
+      const allPlaced = movedJellyIds.length >= current.problem.movableCount;
 
       return {
         ...current,
-        placedRightIds,
+        movedJellyIds,
         gameState: allPlaced ? "answering" : current.gameState
       };
     });
@@ -195,16 +235,41 @@ function GameScreen({ settings, progress, onSettingsChange, onProgressChange }: 
         visualTarget: target
       });
 
+      const currentSession = progressRef.current.collectionSession;
+      const shouldCollect =
+        currentSession.status === "active" &&
+        currentSession.id === round.problem.collectionSessionId &&
+        currentSession.currentIndex === round.problem.collectionIndex;
+      const nextSession = shouldCollect ? advanceCollectionSession(currentSession) : currentSession;
+      const run: CollectionRun = {
+        problemId: round.problem.id,
+        from: currentSession.collectedTotal,
+        to: nextSession.collectedTotal,
+        added: Math.max(0, nextSession.collectedTotal - currentSession.collectedTotal),
+        trueClear: currentSession.status !== "completed" && nextSession.status === "completed"
+      };
+
+      setMeterValue(run.from);
+      setCollectionRun(run);
+      setSuccessPhase("reading");
+
       onProgressChange((current) => {
         const nextStreak = current.currentStreak + 1;
+        const canAdvanceCollection =
+          current.collectionSession.status === "active" &&
+          current.collectionSession.id === round.problem.collectionSessionId &&
+          current.collectionSession.currentIndex === round.problem.collectionIndex;
 
         return {
-          schemaVersion: 1,
+          schemaVersion: 2,
           totalAnswered: current.totalAnswered + 1,
           totalCorrect: current.totalCorrect + 1,
           currentStreak: nextStreak,
           bestStreak: Math.max(current.bestStreak, nextStreak),
-          lastProblemIds: [...current.lastProblemIds, round.problem.id].slice(-RECENT_PROBLEM_LIMIT)
+          lastProblemIds: [...current.lastProblemIds, round.problem.id].slice(-RECENT_PROBLEM_LIMIT),
+          collectionSession: canAdvanceCollection
+            ? advanceCollectionSession(current.collectionSession)
+            : current.collectionSession
         };
       });
 
@@ -240,7 +305,28 @@ function GameScreen({ settings, progress, onSettingsChange, onProgressChange }: 
       ...feedbackOptions,
       visualTarget: target
     });
-    resetRound(progressRef.current.lastProblemIds);
+
+    if (progressRef.current.collectionSession.status === "completed") {
+      const nextSession = createCollectionSession();
+
+      onProgressChange((current) => ({
+        ...current,
+        collectionSession: nextSession,
+        lastProblemIds: []
+      }));
+      resetRound(nextSession);
+      return;
+    }
+
+    resetRound(progressRef.current.collectionSession);
+  };
+
+  const handleSkipSuccess = () => {
+    if (collectionRun) {
+      setMeterValue(collectionRun.to);
+    }
+
+    setSuccessPhase("overlay");
   };
 
   const handleMenuOpen = (target: HTMLElement) => {
@@ -251,14 +337,77 @@ function GameScreen({ settings, progress, onSettingsChange, onProgressChange }: 
     setMenuOpen(true);
   };
 
+  useEffect(() => {
+    if (successPhase === "idle" || successPhase === "overlay") {
+      return;
+    }
+
+    if (successPhase === "reading") {
+      const timerId = window.setTimeout(
+        () => setSuccessPhase("collecting"),
+        reducedMotion ? REDUCED_MOTION_SUCCESS_READING_DURATION_MS : SUCCESS_READING_DURATION_MS
+      );
+
+      return () => window.clearTimeout(timerId);
+    }
+
+    if (!collectionRun) {
+      const timerId = window.setTimeout(() => setSuccessPhase("overlay"), 0);
+
+      return () => window.clearTimeout(timerId);
+    }
+
+    if (reducedMotion || collectionRun.added <= 0) {
+      const timerId = window.setTimeout(() => {
+        setMeterValue(collectionRun.to);
+        setSuccessPhase("overlay");
+      }, REDUCED_MOTION_COLLECTION_DURATION_MS);
+
+      return () => window.clearTimeout(timerId);
+    }
+
+    let currentValue = collectionRun.from;
+    const intervalId = window.setInterval(() => {
+      currentValue = Math.min(collectionRun.to, currentValue + 1);
+      setMeterValue(currentValue);
+
+      if (currentValue >= collectionRun.to) {
+        window.clearInterval(intervalId);
+      }
+    }, COLLECTION_STEP_MS);
+    const timerId = window.setTimeout(
+      () => setSuccessPhase("overlay"),
+      collectionRun.added * COLLECTION_STEP_MS + COLLECTION_WRAP_MS
+    );
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.clearTimeout(timerId);
+    };
+  }, [collectionRun, reducedMotion, successPhase]);
+
   const answerReady = round.gameState === "answering" || round.gameState === "wrong" || round.gameState === "correct";
   const answerDisabled = round.gameState !== "answering";
-  const characterState = getCharacterState(round.gameState, round.placedRightIds.length);
+  const characterState = getCharacterState(round.gameState, round.movedJellyIds.length);
   const presenting = round.gameState === "presenting";
-  const gameContentClassName = `game-content${presenting ? " is-presenting" : ""}`;
+  const successReading = successPhase === "reading";
+  const collecting = successPhase === "collecting";
+  const trueClear = collectionRun?.trueClear || progress.collectionSession.status === "completed";
+  const characterLarge = answerReady || successPhase !== "idle";
+  const displayedMeterValue = successPhase === "idle" ? progress.collectionSession.collectedTotal : meterValue;
+  const answerSheetHidden = !answerReady || collecting;
+  const gameScreenClassName = `screen game-screen${answerReady ? " has-answer-sheet" : ""}${
+    successPhase !== "idle" && successPhase !== "overlay" ? " has-success-skip" : ""
+  }`;
+  const gameContentClassName = `game-content${presenting ? " is-presenting" : ""}${
+    successReading ? " is-success-reading" : ""
+  }`;
+  const bottomHudClassName = `bottom-hud${answerReady ? " has-answer-sheet" : ""}${
+    collecting ? " is-collecting" : ""
+  }`;
 
   return (
-    <section className="screen game-screen">
+    <section className={gameScreenClassName}>
       <ParentMenuHandle onOpen={handleMenuOpen} progressLabel="長押しでメニュー" />
 
       <div className="orientation-prompt" role="status" aria-live="polite">
@@ -270,43 +419,72 @@ function GameScreen({ settings, progress, onSettingsChange, onProgressChange }: 
         <strong>スマホを横向きにしてね</strong>
       </div>
 
-      <div className={gameContentClassName} aria-live="polite">
+      <div className={gameContentClassName}>
         <Equation
-          animateKey={round.problem.id}
+          animateKey={`${round.problem.id}-${successReading ? "success" : "question"}`}
           problem={round.problem}
           revealAnswer={round.gameState === "correct"}
           settling={round.gameState === "dropping"}
-          variant={round.gameState === "presenting" ? "featured" : "compact"}
+          successReading={successReading}
+          variant={round.gameState === "presenting" || successReading ? "featured" : "compact"}
         />
         <JellyBoard
           problem={round.problem}
           level={settings.level}
           gameState={round.gameState}
-          placedRightIds={round.placedRightIds}
+          movedJellyIds={round.movedJellyIds}
+          assistEnabled={settings.assistEnabled}
           feedbackOptions={feedbackOptions}
           onJellyPlaced={handleJellyPlaced}
         />
-        <div className={`answer-slot ${answerReady ? "is-ready" : ""}`} aria-hidden={answerReady ? undefined : true}>
-          {answerReady && (
-            <AnswerChoices
-              choices={round.choices}
-              selectedAnswer={round.selectedAnswer}
-              correctAnswer={round.problem.answer}
-              disabled={answerDisabled}
-              gameState={round.gameState}
-              onSelect={handleSelectAnswer}
-            />
-          )}
+        <div className={bottomHudClassName}>
+          <ProgressMeter
+            value={displayedMeterValue}
+            target={COLLECTION_JELLY_TOTAL}
+            collecting={collecting}
+            completed={displayedMeterValue >= COLLECTION_JELLY_TOTAL}
+          />
+          <div
+            className={`answer-sheet-slot ${answerReady ? "is-ready" : ""}`}
+            aria-hidden={answerSheetHidden ? true : undefined}
+          >
+            {answerReady && (
+              <AnswerChoices
+                choices={round.choices}
+                selectedAnswer={round.selectedAnswer}
+                correctAnswer={round.problem.answer}
+                disabled={answerDisabled}
+                gameState={round.gameState}
+                onSelect={handleSelectAnswer}
+              />
+            )}
+          </div>
         </div>
+        {collecting && collectionRun && <div className="collection-flyers" aria-hidden="true">
+          {Array.from({ length: Math.min(collectionRun.added, 10) }, (_, index) => (
+            <span
+              className="collection-flyer"
+              key={`${collectionRun.problemId}-${index}`}
+              style={{ "--flyer-index": index } as React.CSSProperties}
+            />
+          ))}
+        </div>}
       </div>
 
-      <div className="game-character">
-        <Character state={characterState} />
+      <div className={`game-character ${characterLarge ? "is-large" : ""}`}>
+        <Character state={characterState} size={characterLarge ? "large" : "normal"} />
       </div>
 
-      {round.gameState === "correct" && (
+      {successPhase !== "idle" && successPhase !== "overlay" && (
+        <button className="success-skip-button" type="button" onClick={handleSkipSuccess}>
+          スキップ
+        </button>
+      )}
+
+      {successPhase === "overlay" && (
         <SuccessOverlay
           problem={round.problem}
+          trueClear={trueClear}
           onNext={handleNextProblem}
           reducedMotion={reducedMotion}
         />
